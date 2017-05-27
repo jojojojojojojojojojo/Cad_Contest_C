@@ -1,0 +1,14 @@
+class Placer
+    map<cellId,Cluster*> cell_belong_to_which_cluster
+    vector< map<cellId,cellId> > nearby_cell_in_each_row
+
+class Cluster
+    module* ref_module
+    vector<node*> PI
+    vector<node*> PO
+    vector<module*> every_module_in_the_cluster
+
+class node
+    vector<node*> fan_ins
+    vector<node*> fan_outs    
+        
