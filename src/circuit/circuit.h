@@ -14,6 +14,7 @@ using namespace std;
 #include "fregion.h"
 #include "../common/paramhandler.h"
 #include "../common/util.h"
+#include "../common/GnuplotPlotter.h"
 
 class Circuit
 {
@@ -112,10 +113,6 @@ class Circuit
     void setName(const string &name){ _name = name; }
     void setRectChip( Rect rectChip ) { _rectangleChip = rectChip; }
 
-    //newly added function (iccad'17)
-    void createSNetIndexVec();
-    bool isRowBottomVss(const unsigned& _rowId);
-
     // common utilities for ntuplace
     inline bool isInMaxDisp(const Point &posOri, const Point &pos);
     inline void rect2RowIds(const Rect &rect, int &idBottom, int &idTop);
@@ -137,6 +134,13 @@ class Circuit
     inline void print_nets();
     inline void print_modules();
     inline void print_fregions();
+
+    ///////////////////////////////////////////////////////////////
+    //                Newly Added Functions (ICCAD'17)           //
+    ///////////////////////////////////////////////////////////////
+    void createSNetIndexVec();  //mapping from row index to "vdd" or "vss"
+    bool isRowBottomVss(const unsigned& _rowId);
+    void outputGnuplotFigure(string filePathName);
 
 private:
     /////////////////////////////////////////////

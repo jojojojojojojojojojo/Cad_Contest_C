@@ -14,7 +14,6 @@ SOURCES += \ # start from the .pro file
     src/common/arghandler.cpp \
     src/common/paramhandler.cpp \
     src/common/util.cpp \
-    src/common/GnuplotPlotter.cpp \
     src/circuit/circuit.cpp \
     src/parser/defrw.cpp \
     src/parser/lefrw.cpp \
@@ -26,7 +25,6 @@ HEADERS += \
     src/common/arghandler.h \
     src/common/paramhandler.h \
     src/common/util.h \
-    src/common/GnuplotPlotter.h \
     src/circuit/circuit.h \
     src/circuit/module.h \
     src/circuit/net.h \

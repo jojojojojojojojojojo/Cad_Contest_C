@@ -35,6 +35,9 @@ int main( int argc, char ** argv )
     cout<<"Module Height = "<<circuit.module(0).height()<<endl;
     Row::site.showInfo();
     */
+    cout<<"Writing plot file\n";
+    circuit.outputGnuplotFigure("orig.plt");
+
     placer.place_all_mods_to_site();
 
     cout<<"HPWL = "<<placer.compute_hpwl()<<endl;
@@ -43,6 +46,9 @@ int main( int argc, char ** argv )
     cout<<"Displacement = "<<placer.compute_displacement(Placer::PL_INIT)<<endl;
     
     circuit.showInfo();
+
+    cout<<"Writing plot file\n";
+    circuit.outputGnuplotFigure("result.plt");
 
     if(param.outDefFile != param.UNKNOWN) { parser.writeDEF( param.defFile , param.outDefFile); }
 	return 0;

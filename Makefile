@@ -33,10 +33,10 @@ MOVE          = mv -f
 TAR           = tar -cf
 COMPRESS      = gzip -9f
 DISTNAME      = cad20171.0.0
-DISTDIR = /home/jozumi/Desktop/CAD_Contest/iccad_2017/objects/cad20171.0.0
+DISTDIR = /home/jozumi/Desktop/CAD_Contest/Cad_Contest_C/objects/cad20171.0.0
 LINK          = g++
 LFLAGS        = -m64 -Wl,-O1
-LIBS          = $(SUBLIBS) -L/usr/X11R6/lib64 -L/home/jozumi/Desktop/CAD_Contest/iccad_2017/lib/lefdef -llef -ldef -fopenmp -lQt5Gui -lQt5Core -lGL -lpthread 
+LIBS          = $(SUBLIBS) -L/usr/X11R6/lib64 -L/home/jozumi/Desktop/CAD_Contest/Cad_Contest_C/lib/lefdef -llef -ldef -fopenmp -lQt5Gui -lQt5Core -lGL -lpthread 
 AR            = ar cqs
 RANLIB        = 
 SED           = sed
@@ -51,6 +51,7 @@ OBJECTS_DIR   = objects/
 SOURCES       = src/common/arghandler.cpp \
 		src/common/paramhandler.cpp \
 		src/common/util.cpp \
+		src/common/GnuplotPlotter.cpp \
 		src/circuit/circuit.cpp \
 		src/parser/defrw.cpp \
 		src/parser/lefrw.cpp \
@@ -60,6 +61,7 @@ SOURCES       = src/common/arghandler.cpp \
 OBJECTS       = objects/arghandler.o \
 		objects/paramhandler.o \
 		objects/util.o \
+		objects/GnuplotPlotter.o \
 		objects/circuit.o \
 		objects/defrw.o \
 		objects/lefrw.o \
@@ -122,6 +124,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		test.pro src/common/arghandler.h \
 		src/common/paramhandler.h \
 		src/common/util.h \
+		src/common/GnuplotPlotter.h \
 		src/circuit/circuit.h \
 		src/circuit/module.h \
 		src/circuit/net.h \
@@ -133,6 +136,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		src/placer/placer.h src/common/arghandler.cpp \
 		src/common/paramhandler.cpp \
 		src/common/util.cpp \
+		src/common/GnuplotPlotter.cpp \
 		src/circuit/circuit.cpp \
 		src/parser/defrw.cpp \
 		src/parser/lefrw.cpp \
@@ -296,8 +300,8 @@ dist: distdir FORCE
 distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
-	$(COPY_FILE) --parents src/common/arghandler.h src/common/paramhandler.h src/common/util.h src/circuit/circuit.h src/circuit/module.h src/circuit/net.h src/circuit/pin.h src/circuit/row.h src/circuit/layer.h src/circuit/fregion.h src/parser/parser.h src/placer/placer.h $(DISTDIR)/
-	$(COPY_FILE) --parents src/common/arghandler.cpp src/common/paramhandler.cpp src/common/util.cpp src/circuit/circuit.cpp src/parser/defrw.cpp src/parser/lefrw.cpp src/parser/parser.cpp src/placer/placer.cpp src/main.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents src/common/arghandler.h src/common/paramhandler.h src/common/util.h src/common/GnuplotPlotter.h src/circuit/circuit.h src/circuit/module.h src/circuit/net.h src/circuit/pin.h src/circuit/row.h src/circuit/layer.h src/circuit/fregion.h src/parser/parser.h src/placer/placer.h $(DISTDIR)/
+	$(COPY_FILE) --parents src/common/arghandler.cpp src/common/paramhandler.cpp src/common/util.cpp src/common/GnuplotPlotter.cpp src/circuit/circuit.cpp src/parser/defrw.cpp src/parser/lefrw.cpp src/parser/parser.cpp src/placer/placer.cpp src/main.cpp $(DISTDIR)/
 
 
 clean:compiler_clean 
@@ -345,6 +349,10 @@ objects/paramhandler.o: src/common/paramhandler.cpp src/common/paramhandler.h \
 objects/util.o: src/common/util.cpp src/common/util.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objects/util.o src/common/util.cpp
 
+objects/GnuplotPlotter.o: src/common/GnuplotPlotter.cpp src/common/GnuplotPlotter.h \
+		src/common/util.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objects/GnuplotPlotter.o src/common/GnuplotPlotter.cpp
+
 objects/circuit.o: src/circuit/circuit.cpp src/circuit/circuit.h \
 		src/circuit/layer.h \
 		src/common/util.h \
@@ -354,7 +362,8 @@ objects/circuit.o: src/circuit/circuit.cpp src/circuit/circuit.h \
 		src/circuit/net.h \
 		src/circuit/fregion.h \
 		src/common/paramhandler.h \
-		src/common/arghandler.h
+		src/common/arghandler.h \
+		src/common/GnuplotPlotter.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objects/circuit.o src/circuit/circuit.cpp
 
 objects/defrw.o: src/parser/defrw.cpp includes/def/defrReader.hpp \
@@ -396,7 +405,8 @@ objects/defrw.o: src/parser/defrw.cpp includes/def/defrReader.hpp \
 		src/circuit/net.h \
 		src/circuit/fregion.h \
 		src/common/paramhandler.h \
-		src/common/arghandler.h
+		src/common/arghandler.h \
+		src/common/GnuplotPlotter.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objects/defrw.o src/parser/defrw.cpp
 
 objects/lefrw.o: src/parser/lefrw.cpp includes/lef/lefrReader.hpp \
@@ -427,7 +437,8 @@ objects/lefrw.o: src/parser/lefrw.cpp includes/lef/lefrReader.hpp \
 		src/circuit/net.h \
 		src/circuit/fregion.h \
 		src/common/paramhandler.h \
-		src/common/arghandler.h
+		src/common/arghandler.h \
+		src/common/GnuplotPlotter.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objects/lefrw.o src/parser/lefrw.cpp
 
 objects/parser.o: src/parser/parser.cpp src/parser/parser.h \
@@ -440,7 +451,8 @@ objects/parser.o: src/parser/parser.cpp src/parser/parser.h \
 		src/circuit/net.h \
 		src/circuit/fregion.h \
 		src/common/paramhandler.h \
-		src/common/arghandler.h
+		src/common/arghandler.h \
+		src/common/GnuplotPlotter.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objects/parser.o src/parser/parser.cpp
 
 objects/placer.o: src/placer/placer.cpp src/placer/placer.h \
@@ -454,6 +466,7 @@ objects/placer.o: src/placer/placer.cpp src/placer/placer.h \
 		src/circuit/fregion.h \
 		src/common/paramhandler.h \
 		src/common/arghandler.h \
+		src/common/GnuplotPlotter.h \
 		src/parser/parser.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objects/placer.o src/placer/placer.cpp
 
@@ -468,6 +481,7 @@ objects/main.o: src/main.cpp src/common/arghandler.h \
 		src/circuit/row.h \
 		src/circuit/net.h \
 		src/circuit/fregion.h \
+		src/common/GnuplotPlotter.h \
 		src/placer/placer.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objects/main.o src/main.cpp
 

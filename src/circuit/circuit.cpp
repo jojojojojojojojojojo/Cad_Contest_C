@@ -340,7 +340,7 @@ void Circuit::showInfo()
 
 
 ///////////////////////////////////////////////////////////////
-//                Newky Added Functions (ICCAD'17)           //
+//                Newly Added Functions (ICCAD'17)           //
 ///////////////////////////////////////////////////////////////
 
 void Circuit::createSNetIndexVec()
@@ -373,4 +373,22 @@ bool Circuit::isRowBottomVss(const unsigned& _rowId)
         assert(false);
     }
     return false;
+}
+
+void Circuit::outputGnuplotFigure(string filePathName)
+{
+    GnuplotPlotter plotter;
+
+    plotter.setTitle("placement figure");
+
+    // add rectangles of moudles
+    for (unsigned i = 0; i < _modules.size(); i++) {
+        Module &module = _modules[i];
+        plotter.addRectangle(Rect(module.x(),module.y(),module.x()+module.width(),module.y()+module.height()));
+    }
+
+    // add rectangle of placement core reigon
+    plotter.addRectangle(_rectangleChip);
+
+    plotter.outputPlotFile(filePathName);
 }
