@@ -20,7 +20,7 @@ int main( int argc, char ** argv )
     placer.save_modules_2_pos(Placer::PL_INIT);
 
     //circuit.print_layers();
-    //circuit.print_rows();
+    circuit.print_rows();
     //circuit.print_nets();
     //circuit.print_modules();
     //circuit.print_masters();

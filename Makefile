@@ -57,6 +57,8 @@ SOURCES       = src/common/arghandler.cpp \
 		src/parser/lefrw.cpp \
 		src/parser/parser.cpp \
 		src/placer/placer.cpp \
+		src/placer/node.cpp \
+		src/placer/cluster.cpp \
 		src/main.cpp 
 OBJECTS       = objects/arghandler.o \
 		objects/paramhandler.o \
@@ -67,6 +69,8 @@ OBJECTS       = objects/arghandler.o \
 		objects/lefrw.o \
 		objects/parser.o \
 		objects/placer.o \
+		objects/node.o \
+		objects/cluster.o \
 		objects/main.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/shell-unix.conf \
@@ -133,7 +137,9 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		src/circuit/layer.h \
 		src/circuit/fregion.h \
 		src/parser/parser.h \
-		src/placer/placer.h src/common/arghandler.cpp \
+		src/placer/placer.h \
+		src/placer/node.h \
+		src/placer/cluster.h src/common/arghandler.cpp \
 		src/common/paramhandler.cpp \
 		src/common/util.cpp \
 		src/common/GnuplotPlotter.cpp \
@@ -142,6 +148,8 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		src/parser/lefrw.cpp \
 		src/parser/parser.cpp \
 		src/placer/placer.cpp \
+		src/placer/node.cpp \
+		src/placer/cluster.cpp \
 		src/main.cpp
 QMAKE_TARGET  = cad2017
 DESTDIR       = #avoid trailing-slash linebreak
@@ -300,8 +308,8 @@ dist: distdir FORCE
 distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
-	$(COPY_FILE) --parents src/common/arghandler.h src/common/paramhandler.h src/common/util.h src/common/GnuplotPlotter.h src/circuit/circuit.h src/circuit/module.h src/circuit/net.h src/circuit/pin.h src/circuit/row.h src/circuit/layer.h src/circuit/fregion.h src/parser/parser.h src/placer/placer.h $(DISTDIR)/
-	$(COPY_FILE) --parents src/common/arghandler.cpp src/common/paramhandler.cpp src/common/util.cpp src/common/GnuplotPlotter.cpp src/circuit/circuit.cpp src/parser/defrw.cpp src/parser/lefrw.cpp src/parser/parser.cpp src/placer/placer.cpp src/main.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents src/common/arghandler.h src/common/paramhandler.h src/common/util.h src/common/GnuplotPlotter.h src/circuit/circuit.h src/circuit/module.h src/circuit/net.h src/circuit/pin.h src/circuit/row.h src/circuit/layer.h src/circuit/fregion.h src/parser/parser.h src/placer/placer.h src/placer/node.h src/placer/cluster.h $(DISTDIR)/
+	$(COPY_FILE) --parents src/common/arghandler.cpp src/common/paramhandler.cpp src/common/util.cpp src/common/GnuplotPlotter.cpp src/circuit/circuit.cpp src/parser/defrw.cpp src/parser/lefrw.cpp src/parser/parser.cpp src/placer/placer.cpp src/placer/node.cpp src/placer/cluster.cpp src/main.cpp $(DISTDIR)/
 
 
 clean:compiler_clean 
@@ -469,6 +477,21 @@ objects/placer.o: src/placer/placer.cpp src/placer/placer.h \
 		src/common/GnuplotPlotter.h \
 		src/parser/parser.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objects/placer.o src/placer/placer.cpp
+
+objects/node.o: src/placer/node.cpp src/placer/node.h \
+		src/circuit/module.h \
+		src/circuit/pin.h \
+		src/common/util.h \
+		src/circuit/row.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objects/node.o src/placer/node.cpp
+
+objects/cluster.o: src/placer/cluster.cpp src/placer/cluster.h \
+		src/placer/node.h \
+		src/circuit/module.h \
+		src/circuit/pin.h \
+		src/common/util.h \
+		src/circuit/row.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objects/cluster.o src/placer/cluster.cpp
 
 objects/main.o: src/main.cpp src/common/arghandler.h \
 		src/common/paramhandler.h \

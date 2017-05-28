@@ -179,7 +179,7 @@ public:
     void setIsBottomVss()
     {
         string pinName = _name + ":vss";
-        // either find or not a core
+        // either find or not a core (-> a preplaced block)
         assert(_pinsNameMap.find(pinName) != _pinsNameMap.end() || _classType != "CORE");
         Pin* _vssPin = _pPins[_pinsNameMap.find(pinName)->second];
         double yPos = _vssPin->yOffset()+0.5*_height+0.5*(_vssPin->port().top()-_vssPin->port().bottom());

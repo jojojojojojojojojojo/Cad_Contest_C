@@ -235,14 +235,14 @@ void Circuit::print_masters()
     }
 }
 
-//only checks rows difference
 bool Circuit::isInMaxDisp(const Point &posOri, const Point &pos)
 {
-    //double xDiff = pos.x()-posOri.x(), yDiff = pos.y()-posOri.y();
-    //double displacement = fabs( xDiff ) + fabs( yDiff );
-    double displacement = fabs((pos.y()-posOri.y())/rowHeight());
+    double xDiff = pos.x()-posOri.x(), yDiff = pos.y()-posOri.y();
+    double displacement = fabs( xDiff ) + fabs( yDiff );
+    double norm_movement = displacement/rowHeight();
+    //double displacement = fabs((pos.y()-posOri.y())/rowHeight());
 
-    return displacement <= param.maxDisp;
+    return norm_movement <= param.maxDisp;
 }
 
 void Circuit::rect2RowIds(const Rect &rect, int &idBottom, int &idTop)
