@@ -382,14 +382,32 @@ void Placer::Decluster()
 
 }
 
-void Placer::RenewPosition()
+void Placer::RenewPosition(Cluster &c1) 
 {
-
+    for(size_t i = 0 ; i < c1._modules.size() ; i++){
+        Point pos(c1._x_ref+c1._delta_x[i],_cir->row_id_2_y(c1._modules[i]->_rowId));
+        if(c1._modules[i]->_degree%2)
+            move_module_2_pos(*c1._modules[i]->_module,pos,MOVE_ONSITE);
+        else
+            move_module_2_pos(*c1._modules[i]->_module,pos,MOVE_FREE); // not finished, need to check
+            //need to consider cell flipping when placing odd row height cells
+            //Circuit::isRowBottomVss(rowId), Module::IsBottomVss(), Module::setIsBottomVss() may come in handy?
+            //use setIsBottomVss() before IsBottomVss()
+            //maybe we should just modify function move_module_2_pos?
+    }
 }
 
-double Placer::RenewCost()
+double Placer::RenewCost(Cluster &c1)   
 {
-    return 0;
+    double cost = 0; // already had a data member "cost" in class cluster, we can just store cost in there
+    for(size_t i = 0 ; i < c1._modules.size() ; i++){
+        cost += c1._modules[i]->_module->weight() * pow(c1._modules[i]->_module->x()-_modPLPos[0][c1._modules[i]->_module->dbId()].x(),2);
+        //since renewCost is used when placeRow(trial) (to determine cost of placing in different rows)
+        //it's maybe better to use manhattan distance instead of quadratic distance to minimize displacement
+        //(because displacment is measured in manhattan distance when evaluating)
+        //(also should take displacement in y into account)
+    }
+    return cost;
 }
 
 Cluster* Placer::Collapse()

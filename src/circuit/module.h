@@ -49,6 +49,7 @@ public:
     bool isIOPin()      {return _masterId==-1;}
     //newly add
     bool isBottomVss()  {return _isBottomVss;}  //better call setIsBottomVss before getting this (odd height cells might flip)
+    size_t weight()     {return _pPins.size();}
 
     Orient orient()                     {return _orient;}
     string classType()                  {return _classType;}
