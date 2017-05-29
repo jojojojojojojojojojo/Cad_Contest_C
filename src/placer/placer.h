@@ -3,14 +3,35 @@
 
 #include <vector>
 #include <string>
+#include <cassert>
+#include <map>
 using namespace std;
 
 #include "../circuit/circuit.h"
 #include "../common/paramhandler.h"
 #include "../common/util.h"
 #include "../parser/parser.h"
+#include "node.h"
 
 using namespace util;
+
+class Cluster
+{
+    friend class Placer;
+public:
+    Cluster(){}
+    //int round_x_to_site(double x_in, Row* _row);    //since q/e is usually not on site, this function round x into site
+private:
+
+    Module* _ref_module;        
+    int _x_ref;                 //position of _ref_module (_q/_e)
+    double _e;                  //cluster weight
+    double _q;                  //cluster q
+    vector<int> _delta_x;       //delta position of _Modules[i] to ref (same index as in _Modules)
+    double _cost;               //stored cost
+    map<int,Node*> _lastNode;   //last node in each row
+    vector<Node*> _modules;     //all Modules 
+};
 
 class Placer
 {
@@ -50,6 +71,18 @@ public:
     void place_valid_site(Module &mod); //nearest site without vialation of P/G alignment 
     void place_all_mods_to_site();
     
+    /////////////////////////////////////////////////
+    //             Operating Functions             //
+    /////////////////////////////////////////////////
+
+    //change return type and input variables if neccessary
+    void AddCell(Module* _cell, int _rowNum, Row* _row);
+    void AddCluster();
+    void Decluster();
+    void RenewPosition();
+    double RenewCost();         //return new cost
+    Cluster* Collapse();
+    vector<int> CheckOverlap(); //return vector of index (_modules[index]) overlapping with other cells 
 
 
     Circuit &cir() {return *_cir;}
@@ -61,8 +94,11 @@ private:
     // design data
     /////////////////////////////////////////////
     Circuit *_cir;
-    vector< vector<Point> > _modPLPos; // init, last, best
+    vector< vector<Point> > _modPLPos;      // init, last, best (save poitions of modules)
     //vector<Point> _modInitPos, _modLastPos, _modBestPos;
+
+    map<int,Cluster*> _cellIdClusterMap;    // use to store cell cluster mapping (also store clusters)
+    vector< map<int,int> > nearby_cells;    // use this to detect nearby cells (clusters)
 };
 
 #endif // PLACEMENT_H

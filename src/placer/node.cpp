@@ -26,6 +26,24 @@ Node* Node::getFI(const int& _index) const
 	return _fanins[_index];
 }
 
+bool Node::isPI() 
+{
+	for(int i = 0; i < _degree ;i++)
+	{
+		if(_fanins[i] != 0) return false;
+	}
+	return true;
+}
+
+bool Node::isPO() 
+{
+	for(int i = 0; i < _degree ;i++)
+	{
+		if(_fanouts[i] != 0) return false;
+	}
+	return true;
+}
+
 Node* Node::getFO(const int& _index) const
 {
 	assert(_index < _degree);

@@ -4,14 +4,17 @@
 #include <vector>
 #include <string>
 #include <cassert>
-#include <utility>	//pair
+#include <map>
 #include "node.h"
 #include "../circuit/module.h"
 
 using namespace std;
 
+class Placer;
+
 class Cluster
 {
+	friend class Placer;
 public:
 	Cluster(Module* first_module, int rowNum, Row* _row): _ref_module(first_module)
 	{
@@ -41,9 +44,8 @@ private:
 	double _q;					//cluster q
 	vector<int> _delta_x;		//delta position of _Modules[i] to ref (same index as in _Modules)
 	double _cost;				//stored cost
-    vector<Node*> _PIs;
-    vector<Node*> _POs;			
-    vector< pair<Module*, int> > _modules;	//all Modules (and correspondent row)
+    map<int,Node*> _lastNode;	//last node in each row
+    vector<Node*> _modules;		//all Modules 
 };
 
 #endif

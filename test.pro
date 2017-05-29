@@ -21,7 +21,6 @@ SOURCES += \ # start from the .pro file
     src/parser/parser.cpp \
     src/placer/placer.cpp \
     src/placer/node.cpp \
-    src/placer/cluster.cpp \
     src/main.cpp
 
 HEADERS += \
@@ -39,5 +38,4 @@ HEADERS += \
     src/parser/parser.h \
     src/placer/placer.h \
     src/placer/node.h \
-    src/placer/cluster.h 
 

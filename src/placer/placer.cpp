@@ -208,3 +208,50 @@ void Placer::place_all_mods_to_site()
         if(_cir->module(i).isStdCell()) { place_valid_site(_cir->module(i)); }
     }
 }
+
+/////////////////////////////////////////////////
+//           Functions for Clusters            //
+/////////////////////////////////////////////////
+
+/////////////////TO-DO/////////////
+//1. add module to _modules
+//2. renew e, q, delta_x, (ref_module and x_ref)
+//3. create node
+//4. link node to PIs and POs
+//5. renew x, round x
+//This Function only adds cells at the end, and shouldn't add cell in the middle or start of the cluster
+void Placer::AddCell(Module* _cell, int _rowNum, Row* _row)
+{
+    
+}
+
+void Placer::AddCluster()
+{
+
+}
+
+void Placer::Decluster()
+{
+
+}
+
+void Placer::RenewPosition()
+{
+
+}
+
+double Placer::RenewCost()
+{
+
+}
+
+Cluster* Placer::Collapse()
+{
+    return 0;
+}
+
+vector<int> Placer::CheckOverlap()
+{
+    vector<int> _modulesIndex;
+    return _modulesIndex;
+}
