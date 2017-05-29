@@ -235,19 +235,22 @@ void Placer::Decluster()
 
 }
 
-void Placer::RenewPosition(Cluster &c1) //是要丟一個Cluster進來，還是整個circuit ?
+void Placer::RenewPosition(Cluster &c1) 
 {
     for(size_t i = 0 ; i < c1._modules.size() ; i++){
         Point pos(c1._x_ref+c1._delta_x[i],_cir->row_id_2_y(c1._modeules[i]._rowId));
-        move_module_2_pos(c1._modules[i]->_module,pos,MOVE_ONSITE);
+        if(c1._module[i]->_degree%2)
+            move_module_2_pos(c1._modules[i]->_module,pos,MOVE_ONSITE);
+        else
+            move_module_2_pos(c1._modules[i]->_module,pos,MOVE_FREE); // not finished, need to check
     }
 }
 
-double Placer::RenewCost(Cluster &c1)   //也是丟一個Cluster進來嗎？
+double Placer::RenewCost(Cluster &c1)   
 {
     double cost = 0;
     for(size_t i = 0 ; i < c1._modules.size() ; i++){
-        cost += _modules[i]->_module->weight() * pow(_modules[i]->_module->x()-_modPLPos[0][cellId],2); //_modPLPos[0]為一開始的位置，cellId = ??
+        cost += _modules[i]->_module->weight() * pow(_modules[i]->_module->x()-_modPLPos[0][_modules[i]->_module->dbId()],2);
     }
     return cost;
 }
