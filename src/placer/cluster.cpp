@@ -10,7 +10,11 @@
 //This Function only adds cells at the end, and shouldn't add cell in the middle or start of the cluster
 void Cluster::AddCell(Module* _cell, int _rowNum, Row* _row)
 {
-	
+	Node* n = new Node(_cell,_cell->height(),_rowNum);
+	_modules.push_back(n);
+	//	case1. left
+	//	case2. middle
+	//	case3. right	
 }
 
 void Cluster::AddCluster()
