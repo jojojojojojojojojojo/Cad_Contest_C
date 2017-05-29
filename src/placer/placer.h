@@ -79,8 +79,8 @@ public:
     void AddCell(Module* _cell, int _rowNum, Row* _row);
     void AddCluster();
     void Decluster();
-    void RenewPosition();
-    double RenewCost();         //return new cost
+    void RenewPosition(Cluster &c1);
+    double RenewCost(Cluster &c1);         //return new cost
     Cluster* Collapse();
     vector<int> CheckOverlap(); //return vector of index (_modules[index]) overlapping with other cells 
 
