@@ -19,17 +19,18 @@ class Cluster
 {
     friend class Placer;
 public:
-    Cluster(){}
+    Cluster():_e(0),_q(0),_cost(0){}
     //int round_x_to_site(double x_in, Row* _row);    //since q/e is usually not on site, this function round x into site
 private:
 
-    Module* _ref_module;        
+    Node* _ref_module;        
     int _x_ref;                 //position of _ref_module (_q/_e)
     double _e;                  //cluster weight
     double _q;                  //cluster q
-    vector<int> _delta_x;       //delta position of _Modules[i] to ref (same index as in _Modules)
+    vector<int> _delta_x;       //delta position of _modules[i] to ref (same index as in _modules)
     double _cost;               //stored cost
-    map<int,Node*> _lastNode;   //last node in each row
+
+    map<int,int> _lastNode;     //last node in each row (first: rowId, second: index in _modules)
     vector<Node*> _modules;     //all Modules 
 };
 
@@ -38,6 +39,7 @@ class Placer
 public:
     Placer(Circuit &inCir): _cir(&inCir), _modPLPos(0) {
         _modPLPos.resize( 3, vector<Point>( _cir->numModules() ) );
+        prev_cells.resize(_cir->numRows());
         save_modules_2_pos(PL_INIT);
         save_modules_2_pos(PL_BEST);
         save_modules_2_pos(PL_LAST);
@@ -70,19 +72,23 @@ public:
     int find_valid_row(Module &mod);    //nearest row without vialation of P/G alignment
     void place_valid_site(Module &mod); //nearest site without vialation of P/G alignment 
     void place_all_mods_to_site();
+    void sort_cells();
+    void print_cell_order() const;
+    void try_area();
     
     /////////////////////////////////////////////////
     //             Operating Functions             //
     /////////////////////////////////////////////////
 
     //change return type and input variables if neccessary
-    void AddCell(Module* _cell, int _rowNum, Row* _row);
+    void AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell = false);
     void AddCluster();
     void Decluster();
     void RenewPosition();
     double RenewCost();         //return new cost
     Cluster* Collapse();
     vector<int> CheckOverlap(); //return vector of index (_modules[index]) overlapping with other cells 
+    void set_x_to_site(Cluster* _clus);
 
 
     Circuit &cir() {return *_cir;}
@@ -97,8 +103,10 @@ private:
     vector< vector<Point> > _modPLPos;      // init, last, best (save poitions of modules)
     //vector<Point> _modInitPos, _modLastPos, _modBestPos;
 
-    map<int,Cluster*> _cellIdClusterMap;    // use to store cell cluster mapping (also store clusters)
-    vector< map<int,int> > nearby_cells;    // use this to detect nearby cells (clusters)
+    vector<int> cell_order;                 // used as legalization order ( _cir->module(cell_order[0]) : first cell )
+    map<int, Cluster*> _rowIdClusterMap;    // store the last cluster in every row
+    map<int, Cluster*> _cellIdClusterMap;   // use to store cell cluster mapping (also store clusters)
+    vector< map<int,int> > prev_cells;      // use this to detect nearby previous cells (id to id)
 };
 
 #endif // PLACEMENT_H

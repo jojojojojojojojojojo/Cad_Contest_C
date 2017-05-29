@@ -20,7 +20,7 @@ int main( int argc, char ** argv )
     placer.save_modules_2_pos(Placer::PL_INIT);
 
     //circuit.print_layers();
-    circuit.print_rows();
+    //circuit.print_rows();
     //circuit.print_nets();
     //circuit.print_modules();
     //circuit.print_masters();
@@ -28,22 +28,27 @@ int main( int argc, char ** argv )
     /*
     for(unsigned i = 0 ; i < circuit.numRows() ; i++)
     {
-    	cout<<"Row "<<i<<"'s bottom is "<<(circuit.isRowBottomVss(i)?"Vss":"Vdd")<<endl;
+    	cout<<"Row "<<i<<"'s bottom is "<<(circuit.isRowBottomVss(i)?"Vss":"Vdd");
+    	cout<<"; Orientation = "<< orientStr(circuit.row(i).orient())<<endl;
     }
 
     cout<<"Row Height = "<<circuit.row(0).height()<<endl;
     cout<<"Module Height = "<<circuit.module(0).height()<<endl;
     Row::site.showInfo();
     */
-    cout<<"Writing plot file\n";
-    circuit.outputGnuplotFigure("orig.plt");
+    //cout<<"Writing plot file\n";
+    //circuit.outputGnuplotFigure("orig.plt");
 
     placer.place_all_mods_to_site();
+    placer.sort_cells();
 
-    cout<<"HPWL = "<<placer.compute_hpwl()<<endl;
+    //placer.print_cell_order();
+    placer.try_area();
+
+    cout<<" HPWL = "<<placer.compute_hpwl()<<endl;
 
     //should be 0
-    cout<<"Displacement = "<<placer.compute_displacement(Placer::PL_INIT)<<endl;
+    cout<<" Displacement = "<<placer.compute_displacement(Placer::PL_INIT)<<endl;
     
     circuit.showInfo();
 

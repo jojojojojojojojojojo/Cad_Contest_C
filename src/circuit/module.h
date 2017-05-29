@@ -48,7 +48,7 @@ public:
     bool isDFF()        {return _isDFF;}
     bool isIOPin()      {return _masterId==-1;}
     //newly add
-    bool isBottomVss()  {return _isBottomVss;}
+    bool isBottomVss()  {return _isBottomVss;}  //better call setIsBottomVss before getting this (odd height cells might flip)
 
     Orient orient()                     {return _orient;}
     string classType()                  {return _classType;}
