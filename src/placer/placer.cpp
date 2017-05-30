@@ -284,7 +284,7 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
 
     if(_firstCell)
     {
-        assert(_clus->_modules.empty());
+        assert(_clus->_modules.empty());    //already push_back(_newNode), so may be always wrong?
         _clus->_ref_module = _newNode;
         _clus->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
         _clus->_q += (_clus->_e)*(_modPLPos[0][_cell->dbId()].x());    //q <- q + e*(x'(i)-delta_x(i))
@@ -393,15 +393,15 @@ void Placer::RenewPosition(Cluster &c1)
 
 double Placer::RenewCost(Cluster &c1)   
 {
-    double cost = 0; // already had a data member "cost" in class cluster, we can just store cost in there
+    c1._cost = 0; // already had a data member "cost" in class cluster, we can just store cost in there
     for(size_t i = 0 ; i < c1._modules.size() ; i++){
-        cost += c1._modules[i]->_module->weight() * pow(c1._modules[i]->_module->x()-_modPLPos[0][c1._modules[i]->_module->dbId()].x(),2);
+        c1._cost += abs(c1._modules[i]->_module->x()-_modPLPos[0][c1._modules[i]->_module->dbId()].x()) + abs(c1._modules[i]->_module->y()-_modPLPos[0][c1._modules[i]->_module->dbId()].y());
         //since renewCost is used when placeRow(trial) (to determine cost of placing in different rows)
         //it's maybe better to use manhattan distance instead of quadratic distance to minimize displacement
         //(because displacment is measured in manhattan distance when evaluating)
         //(also should take displacement in y into account)
     }
-    return cost;
+    return c1._cost;
 }
 
 Cluster* Placer::Collapse()
