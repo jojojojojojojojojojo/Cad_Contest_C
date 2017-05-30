@@ -28,6 +28,9 @@ public:
 	bool isPI() ;
 	bool isPO() ;
 
+	void printFO() const;
+	void printFI() const;
+
 	void DFS_to_PO();
 	void DFS_to_PI();
 

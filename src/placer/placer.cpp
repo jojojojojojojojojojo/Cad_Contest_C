@@ -3,6 +3,8 @@
 #include <climits>
 #include <algorithm>
 
+unsigned Cluster::global_id = 0;
+
 /*
 void Placer::place()
 {
@@ -248,16 +250,94 @@ void Placer::print_cell_order() const
     }
 }
 
+void Placer::print_fanins_fanouts(Cluster* _clus) const
+{
+    cout<<"///// Print Fanins Fanouts of a cluster /////\n";
+    for(unsigned i = 0 ; i < _clus->_modules.size() ; i++)
+    {
+        _clus->_modules[i]->printFI();
+        _clus->_modules[i]->printFO();
+    }
+}
+
+void Placer::print_last_module_name() const
+{
+    cout<<" ///// Print last module in each row ///// \n";
+    for(unsigned i = 0 ; i < _cir->numRows() ; i++)
+    {
+        if(_rowIdClusterMap[i] != 0)
+        {
+            int _index = (_rowIdClusterMap[i]->_lastNode.find(i))->second;
+            Node* _node = _rowIdClusterMap[i]->_modules[_index];
+            cout<<"Row #"<<i<<" has last module named = "<<_node->_module->name()<<endl;
+        }
+    }
+}
+
 //this area is made just to try some functionalities of the code
 void Placer::try_area()
 {
-    int index = 29000;
-    Cluster* _clus = new Cluster();
-    Module* _cell = &_cir->module(cell_order[index]);
-    cout<<"Cell Name = "<<_cell->name()<<"; X position = "<<_modPLPos[0][cell_order[index]];
-    cout<<"; #Row = "<<(int)(_cell->height()/_cir->rowHeight())<<endl;
+    for(unsigned i = 0 ; i < _cir->numModules() ; i++)
+    {
+        if(!_cir->module(cell_order[i]).isStdCell()) continue;
 
-    AddCell(_clus,_cell,_cir->y_2_row_id(_cell->y()),true);
+        Module* _cell = &_cir->module(cell_order[i]);
+        int rowHeight = (int)(_cell->height()/_cir->rowHeight());
+        int rowNum = _cir->y_2_row_id(_cell->y());
+
+        /*
+        cout<<"\nCell Name = "<<_cell->name()<<";\nX position = "<<_modPLPos[0][cell_order[i]];
+        cout<<"; #Row = "<<rowHeight<<"; width = "<<_cell->width()<<"; rowNum = "<<rowNum<<endl;
+        */
+
+        //find previous cluster (with max x position) if one exist
+        Cluster* _cluster = 0;
+        int maxX = INT_MIN;
+        for(int j = 0 ; j < rowHeight ; j++ )
+        {
+            if(_rowIdClusterMap[rowNum+j] == 0) continue;
+            Cluster* _lastClus = _rowIdClusterMap[rowNum+j];
+            int index = (_lastClus->_lastNode.find(rowNum+i))->second;
+            int rightmost_x = _lastClus->_x_ref + _lastClus->_delta_x[index] + _lastClus->_modules[index]->_module->width();
+            /*
+            cout<<"_x_ref of cluster = "<<_lastClus->_x_ref<<endl;
+            cout<<"***Cell name = "<<_cell->name()<<"***\n";
+            cout<<"rightmost_x = "<<rightmost_x<<endl;
+            cout<<"_cell->x() = "<<_cell->x()<<endl;
+            cin.get();
+            */
+            if(rightmost_x > maxX )//&& rightmost_x > (_cell->x()) ) 
+            {
+                _cluster = _lastClus;
+            }
+        }
+        if(_cluster == 0) // new cluster
+        {
+            _cluster = new Cluster();
+            _clusters[_cluster->id] = _cluster;
+            AddCell(_cluster, _cell, rowNum, true);
+            //cout<<"New Cluster! _x_ref = "<<_cluster->_x_ref<<endl;
+        }
+        else              // add to _cluster
+        {
+            AddCell(_cluster, _cell, rowNum, false);
+        }
+    }
+
+    /*
+    for(unsigned i = 0 ; i < _clusters.size() ; i ++)
+    {
+        print_fanins_fanouts(_clusters[i]);
+    } */
+
+    //print_last_module_name();
+
+    for(unsigned i = 0 ; i < _clusters.size() ; i ++)
+    {
+        RenewPosition(*_clusters[i]);
+    }
+
+    cout<<"Cluster number = "<<_clusters.size()<<endl;
 }
 
 /////////////////////////////////////////////////
@@ -268,7 +348,7 @@ void Placer::try_area()
 //_firstCell is true if _cell is the first cell of _clus (default value: false)
 //1. create node
 //2. find previous node in cluster
-//3. renew e, q, delta_x, (ref_module)
+//3. renew e, q, delta_x, x_ref, (ref_module)
 //4. add module to _modules, _lastNode
 //5. renew _cellIdClusterMap and _rowIdClusterMap
 //This Function only adds cells at the end, and shouldn't add cell in the middle or start of the cluster
@@ -284,10 +364,10 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
 
     if(_firstCell)
     {
-        assert(_clus->_modules.empty());
+        assert(_clus->_modules.size() == 1);
         _clus->_ref_module = _newNode;
         _clus->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
-        _clus->_q += (_clus->_e)*(_modPLPos[0][_cell->dbId()].x());    //q <- q + e*(x'(i)-delta_x(i))
+        _clus->_q += (_cell->weight())*(_modPLPos[0][_cell->dbId()].x());    //q <- q + e*(x'(i)-delta_x(i))
         for(int i = 0; i < rowHeight ; i++)   
         {
             Cluster* _prevClus = _rowIdClusterMap[_rowNum+i];  //find previous cluster
@@ -341,7 +421,7 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
         _clus->_delta_x.push_back(delta_x);
 
         // renew q
-        _clus->_q += (_clus->_e)*(_modPLPos[0][_cell->dbId()].x()-delta_x);
+        _clus->_q += (_cell->weight())*(_modPLPos[0][_cell->dbId()].x()-delta_x);
     }
 
     // renew _clus->_lastnode and _rowIdClusterMap
@@ -364,6 +444,9 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
     // renew _cellIdClusterMap
     assert(_cellIdClusterMap[_cell->dbId()] == 0);   //assert not exist
     _cellIdClusterMap[_cell->dbId()] = _clus;
+
+    // renew _x_ref
+    set_x_to_site(_clus);
 }
 
 void Placer::AddCluster()
@@ -381,7 +464,7 @@ void Placer::RenewPosition(Cluster &c1)
     for(size_t i = 0 ; i < c1._modules.size() ; i++){
         Point pos(c1._x_ref+c1._delta_x[i],_cir->row_id_2_y(c1._modules[i]->_rowId));
         if(c1._modules[i]->_degree%2)
-            move_module_2_pos(*c1._modules[i]->_module,pos,MOVE_ONSITE);
+            move_module_2_pos(*c1._modules[i]->_module,pos,MOVE_FREE);//MOVE_ONSITE);
         else
             move_module_2_pos(*c1._modules[i]->_module,pos,MOVE_FREE); // not finished, need to check
             //need to consider cell flipping when placing odd row height cells
@@ -418,6 +501,5 @@ vector<int> Placer::CheckOverlap()
 void Placer::set_x_to_site(Cluster* _clus)
 {
     double x = (_clus->_q/_clus->_e);
-    x = _cir->g_x_on_site(x, 0, Circuit::ALIGN_HERE);
-    _clus->_x_ref = (int)x;
+    _clus->_x_ref = _cir->g_x_on_site(x, 0, Circuit::ALIGN_HERE);
 }

@@ -19,12 +19,14 @@ class Cluster
 {
     friend class Placer;
 public:
-    Cluster():_e(0),_q(0),_cost(0){}
+    Cluster():id(global_id), _e(0), _q(0), _cost(0){ global_id++; }
     //int round_x_to_site(double x_in, Row* _row);    //since q/e is usually not on site, this function round x into site
 private:
 
+    unsigned id;                //a unique id for all clusters
+    static unsigned global_id;  //use to assign id for clusters
     Node* _ref_module;        
-    int _x_ref;                 //position of _ref_module (_q/_e)
+    double _x_ref;              //position of _ref_module (_q/_e)
     double _e;                  //cluster weight
     double _q;                  //cluster q
     vector<int> _delta_x;       //delta position of _modules[i] to ref (same index as in _modules)
@@ -75,7 +77,13 @@ public:
     void place_valid_site(Module &mod); //nearest site without vialation of P/G alignment 
     void place_all_mods_to_site();
     void sort_cells();
+
+    /////////////////////////////////////////////
+    // Debug Use Functions
+    /////////////////////////////////////////////
     void print_cell_order() const;
+    void print_fanins_fanouts(Cluster* _clus) const;
+    void print_last_module_name() const;
     void try_area();
     
     /////////////////////////////////////////////////
@@ -83,7 +91,7 @@ public:
     /////////////////////////////////////////////////
 
     //change return type and input variables if neccessary
-    void AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell = false);
+    void AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell);
     void AddCluster();
     void Decluster();
     void RenewPosition(Cluster &c1);
@@ -107,8 +115,10 @@ private:
 
     vector<int> cell_order;                 // used as legalization order ( _cir->module(cell_order[0]) : first cell )
     vector<Cluster*> _rowIdClusterMap;      // store the last cluster in every row
-    vector<Cluster*> _cellIdClusterMap;     // use to store cell cluster mapping (also store clusters)
+    vector<Cluster*> _cellIdClusterMap;     // use to store cell cluster mapping 
     vector< map<int,int> > prev_cells;      // use this to detect nearby previous cells (id to id)
+
+    map<int, Cluster*> _clusters;           // store all clusters
 };
 
 #endif // PLACEMENT_H

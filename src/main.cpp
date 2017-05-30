@@ -36,8 +36,8 @@ int main( int argc, char ** argv )
     cout<<"Module Height = "<<circuit.module(0).height()<<endl;
     Row::site.showInfo();
     */
-    //cout<<"Writing plot file\n";
-    //circuit.outputGnuplotFigure("orig.plt");
+    cout<<"Writing plot file\n";
+    circuit.outputGnuplotFigure("orig.plt");
 
     placer.place_all_mods_to_site();
     placer.sort_cells();

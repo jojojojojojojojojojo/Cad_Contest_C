@@ -50,6 +50,26 @@ bool Node::isPO()
 	return true;
 }
 
+void Node::printFO() const
+{
+	cout<<"****Node module name : "<<_module->name()<<"****\n";
+	for(int i = 0 ; i < _degree ; i++)
+	{
+		if(_fanouts[i] == 0) continue;
+		cout<<"Fanout #"<<i<<" name =  "<<_fanouts[i]->_module->name()<<endl;
+	}
+}
+
+void Node::printFI() const
+{
+	cout<<"****Node module name : "<<_module->name()<<"****\n";
+	for(int i = 0 ; i < _degree ; i++)
+	{
+		if(_fanins[i] == 0) continue;
+		cout<<"Fanin #"<<i<<" name =  "<<_fanins[i]->_module->name()<<endl;
+	}
+}
+
 void Node::DFS_to_PO()
 {
 	for(unsigned int i = 0 ; i < _fanouts.size() ;i++)
