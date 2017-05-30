@@ -93,46 +93,56 @@ bool Placer::move_module_2_pos(Module &mod, const Point &pos, MOVE_TYPE mt)
 
     if( mt == MOVE_ONSITE ){
         _cir->set_x_y_on_site( targetPos );
-        Row &row = _cir->row( _cir->y_2_row_id( targetPos.y() ) );
-        mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect(), row.orient() );
-    }else{
-        mod.setIsBottomVss();
+        //Row &row = _cir->row( _cir->y_2_row_id( targetPos.y() ) );
+        assert(_cir->isRowBottomVss(_cir->y_2_row_id( targetPos.y() )) == mod.isBottomVss());
+        mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() );//row.orient() != cell's orient
+    }
+    else
+    {
         if(mod.isBottomVss() == _cir->isRowBottomVss( _cir->y_2_row_id( targetPos.y() )))
-            mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() );
-        else{
+        {   mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() ); }
+        else
+        {
+            assert(mod.orient() == OR_N || mod.orient() == OR_S);
+            Orient _orient = ((mod.orient()==OR_N)?OR_S:OR_N);
+            mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , _orient);
+            /*
             switch(mod.orient()){
-                case 0:
+                case OR_N:
                      mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_S);
                      break;
-                case 1:
+                case OR_W:
                      mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_E);
                      break;
-                case 2:
+                case OR_S:
                      mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_N);
                      break;
-                case 3:
+                case OR_E:
                      mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_W);
                      break;
-                case 4:
+                case OR_FN:
                      mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_FS);
                      break;
-                case 5:
+                case OR_FW:
                      mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_FE);
                      break;
-                case 6:
+                case OR_FS:
                      mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_FN);  
                      break;
-                case 7:
+                case OR_FE:
                      mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_FW);
                      break;
                 default:
-                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , );
+                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() );
                      break;
             }
-           // still thinking a better way to deal with rotation
-           // FN -> FS & FN -> S , which one is better ?
-           // Is it possible that VSS is on the EAST or WEST side ?
+            */
+            // still thinking a better way to deal with rotation
+            // FN -> FS & FN -> S , which one is better ?
+            // Is it possible that VSS is on the EAST or WEST side ?
+            // Since we are just dealing with N and S right now, use simpler ((mod.orient()==OR_N)?OR_S:OR_N) 
         }
+        mod.setIsBottomVss();
     }
 
     return true;
@@ -238,7 +248,11 @@ void Placer::place_valid_site(Module &mod)
     else
     {
         rowId = _cir->y_2_row_id( mod.y() );
-        if(_cir->isRowBottomVss(rowId) != mod.isBottomVss()){ orient = ((mod.orient()==OR_N)?OR_S:OR_N); change = true;}
+        if(_cir->isRowBottomVss(rowId) != mod.isBottomVss())
+        { 
+            orient = ((mod.orient()==OR_N)?OR_S:OR_N); 
+            change = true;
+        }
     }
     double xPos = _cir->g_x_on_site(mod.x(), rowId, Circuit::ALIGN_HERE);
     double yPos = _cir->row_id_2_y(rowId);
@@ -511,7 +525,20 @@ void Placer::AddCluster(Module* _prevCell, Module* _cell)
     Cluster* _prevClus = _cellIdClusterMap[_prevCell->dbId()];
     Cluster* _clus = _cellIdClusterMap[_cell->dbId()];
     assert(_prevClus != 0 && _clus != 0 && _prevClus != _clus);
-    //assert(_prevClus->)
+    int _prevNodeIndex = _prevClus->_cellIdModuleMap.find(_prevCell->dbId())->second;
+    int _nodeIndex = _clus->_cellIdModuleMap.find(_cell->dbId())->second;
+
+    //assert overlap is true
+    assert(_prevClus->_x_ref+_prevClus->_delta_x[_prevNodeIndex]+_prevCell->width() > _clus->_x_ref+_clus->_delta_x[_nodeIndex]);
+
+    if(_prevClus->_modules.size() <= _clus->_modules.size())    //ref cell belongs to prevClus
+    {
+
+    }
+    else    //ref cell belongs to clus
+    {
+
+    }
 }
 
 void Placer::Decluster()
@@ -524,13 +551,9 @@ void Placer::RenewPosition(Cluster &c1)
     for(size_t i = 0 ; i < c1._modules.size() ; i++){
         Point pos(c1._x_ref+c1._delta_x[i],_cir->row_id_2_y(c1._modules[i]->_rowId));
         if(c1._modules[i]->_degree%2)
-            move_module_2_pos(*c1._modules[i]->_module,pos,MOVE_FREE);//MOVE_ONSITE);
+            move_module_2_pos(*c1._modules[i]->_module,pos,MOVE_ONSITE);
         else
             move_module_2_pos(*c1._modules[i]->_module,pos,MOVE_FREE); // not finished, need to check
-            //need to consider cell flipping when placing odd row height cells
-            //Circuit::isRowBottomVss(rowId), Module::IsBottomVss(), Module::setIsBottomVss() may come in handy?
-            //use setIsBottomVss() before IsBottomVss()
-            //maybe we should just modify function move_module_2_pos?
     }
 }
 
@@ -539,10 +562,6 @@ double Placer::RenewCost(Cluster &c1)
     c1._cost = 0; // already had a data member "cost" in class cluster, we can just store cost in there
     for(size_t i = 0 ; i < c1._modules.size() ; i++){
         c1._cost += abs(c1._modules[i]->_module->x()-_modPLPos[0][c1._modules[i]->_module->dbId()].x()) + abs(c1._modules[i]->_module->y()-_modPLPos[0][c1._modules[i]->_module->dbId()].y());
-        //since renewCost is used when placeRow(trial) (to determine cost of placing in different rows)
-        //it's maybe better to use manhattan distance instead of quadratic distance to minimize displacement
-        //(because displacment is measured in manhattan distance when evaluating)
-        //(also should take displacement in y into account)
     }
     return c1._cost;
 }
