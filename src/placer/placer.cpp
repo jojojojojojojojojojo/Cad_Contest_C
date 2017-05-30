@@ -96,7 +96,43 @@ bool Placer::move_module_2_pos(Module &mod, const Point &pos, MOVE_TYPE mt)
         Row &row = _cir->row( _cir->y_2_row_id( targetPos.y() ) );
         mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect(), row.orient() );
     }else{
-        mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() );
+        mod.setIsBottomVss();
+        if(mod.isBottomVss() == _cir->isRowBottomVss( _cir->y_2_row_id( targetPos.y() )))
+            mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() );
+        else{
+            switch(mod.orient()){
+                case 0:
+                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_S);
+                     break;
+                case 1:
+                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_E);
+                     break;
+                case 2:
+                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_N);
+                     break;
+                case 3:
+                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_W);
+                     break;
+                case 4:
+                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_FS);
+                     break;
+                case 5:
+                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_FE);
+                     break;
+                case 6:
+                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_FN);  
+                     break;
+                case 7:
+                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_FW);
+                     break;
+                default:
+                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , );
+                     break;
+            }
+           // still thinking a better way to deal with rotation
+           // FN -> FS & FN -> S , which one is better ?
+           // Is it possible that VSS is on the EAST or WEST side ?
+        }
     }
 
     return true;
