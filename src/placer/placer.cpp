@@ -349,7 +349,7 @@ void Placer::try_area()
 //1. create node
 //2. find previous node in cluster
 //3. renew e, q, delta_x, x_ref, (ref_module)
-//4. add module to _modules, _lastNode
+//4. add module to _modules, _lastNode, _cellIdModuleMap
 //5. renew _cellIdClusterMap and _rowIdClusterMap
 //This Function only adds cells at the end, and shouldn't add cell in the middle or start of the cluster
 void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell)
@@ -358,7 +358,10 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
     int rowHeight = (int)(_cell->height()/_cir->rowHeight());
     Node* _newNode = new Node(_cell, rowHeight, _rowNum);
     _clus->_e += _cell->weight();   //numPins()
+
+    //add module to _modules, _cellIdModuleMap
     _clus->_modules.push_back(_newNode);
+    _clus->_cellIdModuleMap[_cell->dbId()] = _clus->_modules.size()-1;
 
     map<int, int>::iterator _iter;
 
@@ -383,9 +386,9 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
     else
     {
         int delta_x = INT_MIN;
-        // find previous node in cluster ( set "all"(not just adjacent ones) previous cells to FIs) 
-        //(will modify later)
-
+        // find previous node in cluster ( set "all"(not just adjacent ones) previous cells to FIs)->already modified 
+        vector<double> FI_positions;
+        FI_positions.reserve(rowHeight);
         // renew prev_cells at the same time
         for(int i = 0; i < rowHeight ; i++)   
         {
@@ -402,6 +405,7 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
                 {
                     delta_x = _clus->_delta_x[_iter->second]+_prevNode->_module->width();
                 }
+                FI_positions.push_back(_clus->_delta_x[_iter->second]+_prevNode->_module->width());
             }
             else    //find previous cell if _clus doesn't have one in rowId = _rowNum+i
             {
@@ -413,6 +417,18 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
                     Node* _prevNode = _prevClus->_modules[nodeIndex];
                     prev_cells[_rowNum+i][_cell->dbId()] = _prevNode->_module->dbId();
                 }
+            }
+        }
+        
+        //eliminate non adjacent cells
+        for(int i = 0 ; i < rowHeight ; i++)
+        {
+            if(_newNode->getFI(i) != 0 && delta_x-FI_positions[i] > 0.001)
+            {
+                assert(rowHeight > 1);
+                int index = (_rowNum+i)-_newNode->getFI(i)->_rowId;
+                _newNode->getFI(i)->setFO(index,0);
+                _newNode->setFI(i,0);
             }
         }
 
@@ -449,9 +465,17 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
     set_x_to_site(_clus);
 }
 
-void Placer::AddCluster()
+/////////////////TO-DO/////////////
+// _prevCell is the cell in previous cluster which overlaps with _cell
+// _prevCell and _cell must belongs to different cluster and should overlap
+// will check and possibly modify _rowIdClusterMap and _cellIdClusterMap
+//
+void Placer::AddCluster(Module* _prevCell, Module* _cell)
 {
-
+    Cluster* _prevClus = _cellIdClusterMap[_prevCell->dbId()];
+    Cluster* _clus = _cellIdClusterMap[_cell->dbId()];
+    assert(_prevClus != 0 && _clus != 0 && _prevClus != _clus);
+    //assert(_prevClus->)
 }
 
 void Placer::Decluster()

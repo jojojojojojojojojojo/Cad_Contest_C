@@ -33,6 +33,7 @@ private:
     double _cost;               //stored cost
 
     map<int,int> _lastNode;     //last node in each row (first: rowId, second: index in _modules)
+    map<int,int> _cellIdModuleMap;// mapping between cell id and _modules (first: cellId, second: index in _modules)
     vector<Node*> _modules;     //all Modules 
 };
 
@@ -92,7 +93,7 @@ public:
 
     //change return type and input variables if neccessary
     void AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell);
-    void AddCluster();
+    void AddCluster(Module* _prevCell, Module* _cell);
     void Decluster();
     void RenewPosition(Cluster &c1);
     double RenewCost(Cluster &c1);         //return new cost
