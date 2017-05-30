@@ -40,6 +40,8 @@ public:
     Placer(Circuit &inCir): _cir(&inCir), _modPLPos(0) {
         _modPLPos.resize( 3, vector<Point>( _cir->numModules() ) );
         prev_cells.resize(_cir->numRows());
+        _rowIdClusterMap.resize(_cir->numRows(),0);
+        _cellIdClusterMap.resize(_cir->numModules(),0);
         save_modules_2_pos(PL_INIT);
         save_modules_2_pos(PL_BEST);
         save_modules_2_pos(PL_LAST);
@@ -104,8 +106,8 @@ private:
     //vector<Point> _modInitPos, _modLastPos, _modBestPos;
 
     vector<int> cell_order;                 // used as legalization order ( _cir->module(cell_order[0]) : first cell )
-    map<int, Cluster*> _rowIdClusterMap;    // store the last cluster in every row
-    map<int, Cluster*> _cellIdClusterMap;   // use to store cell cluster mapping (also store clusters)
+    vector<Cluster*> _rowIdClusterMap;      // store the last cluster in every row
+    vector<Cluster*> _cellIdClusterMap;     // use to store cell cluster mapping (also store clusters)
     vector< map<int,int> > prev_cells;      // use this to detect nearby previous cells (id to id)
 };
 
