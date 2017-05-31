@@ -375,19 +375,82 @@ void Placer::try_area()
     }
 
     /*
-    for(unsigned i = 0 ; i < _clusters.size() ; i ++)
+    for(map<int,Cluster*>::iterator iter = _clusters.begin() ; iter != _clusters.end() ; ++iter)
     {
-        print_fanins_fanouts(_clusters[i]);
+        print_fanins_fanouts(iter->second);
     } */
 
     //print_last_module_name();
 
-    for(unsigned i = 0 ; i < _clusters.size() ; i ++)
+    for(map<int,Cluster*>::iterator iter = _clusters.begin() ; iter != _clusters.end() ; ++iter)
     {
-        RenewPosition(*_clusters[i]);
+        RenewPosition(*(iter->second));
     }
 
     cout<<"Cluster number = "<<_clusters.size()<<endl;
+}
+
+void Placer::try_area2()
+{
+    int index = 20400;
+    Cluster* _clus = new Cluster();
+    Module* _cell = &_cir->module(cell_order[index]);
+    cout<<"Cell Name = "<<_cell->name()<<"; X position = "<<_modPLPos[0][cell_order[index]];
+    cout<<"; #Row = "<<(int)(_cell->height()/_cir->rowHeight())<<"; width = "<<_cell->width()<<endl;
+    int rowId = _cir->y_2_row_id(_cell->y());
+
+    AddCell(_clus,_cell, rowId, true);
+    cout<<"Cluster position (_x_ref) = "<<_clus->_x_ref<<endl;
+    
+    index = 20112;
+    _cell = &_cir->module(cell_order[index]);
+    cout<<"Cell Name = "<<_cell->name()<<"; X position = "<<_modPLPos[0][cell_order[index]];
+    cout<<"; #Row = "<<(int)(_cell->height()/_cir->rowHeight())<<"; width = "<<_cell->width()<<endl;
+
+    AddCell(_clus,_cell, rowId-2, false);
+    cout<<"Cluster position (_x_ref) = "<<_clus->_x_ref<<endl;
+
+    index = 20490;
+     _cell = &_cir->module(cell_order[index]);
+    cout<<"Cell Name = "<<_cell->name()<<"; X position = "<<_modPLPos[0][cell_order[index]];
+    cout<<"; #Row = "<<(int)(_cell->height()/_cir->rowHeight())<<"; width = "<<_cell->width()<<endl;
+
+    AddCell(_clus,_cell, rowId-1, false);
+    cout<<"Cluster position (_x_ref) = "<<_clus->_x_ref<<endl;
+
+    cout<<"Printing Fo FIS\n";
+    print_fanins_fanouts(_clus);
+
+    //////////////////////////////////////////////////////////////////////////////////
+    cout<<"/////////////////////////\n";
+    index = 20495;
+    Cluster* _clus2 = new Cluster();
+    _cell = &_cir->module(cell_order[index]);
+    cout<<"Cell Name = "<<_cell->name()<<"; X position = "<<_modPLPos[0][cell_order[index]];
+    cout<<"; #Row = "<<(int)(_cell->height()/_cir->rowHeight())<<"; width = "<<_cell->width()<<endl;
+    //rowId = _cir->y_2_row_id(_cell->y());
+
+    AddCell(_clus2,_cell, rowId, true);
+    cout<<"Cluster position (_x_ref) = "<<_clus2->_x_ref<<endl;
+    
+    index = 20500;
+    _cell = &_cir->module(cell_order[index]);
+    cout<<"Cell Name = "<<_cell->name()<<"; X position = "<<_modPLPos[0][cell_order[index]];
+    cout<<"; #Row = "<<(int)(_cell->height()/_cir->rowHeight())<<"; width = "<<_cell->width()<<endl;
+
+    AddCell(_clus2,_cell, rowId-1, false);
+    cout<<"Cluster position (_x_ref) = "<<_clus2->_x_ref<<endl;
+
+    index = 20505;
+     _cell = &_cir->module(cell_order[index]);
+    cout<<"Cell Name = "<<_cell->name()<<"; X position = "<<_modPLPos[0][cell_order[index]];
+    cout<<"; #Row = "<<(int)(_cell->height()/_cir->rowHeight())<<"; width = "<<_cell->width()<<endl;
+
+    AddCell(_clus2,_cell, rowId-1, false);
+    cout<<"Cluster position (_x_ref) = "<<_clus2->_x_ref<<endl;
+
+    cout<<"Printing Fo FIS\n";
+    print_fanins_fanouts(_clus2);
 }
 
 /////////////////////////////////////////////////
@@ -395,7 +458,7 @@ void Placer::try_area()
 /////////////////////////////////////////////////
 
 /////////////////TO-DO/////////////
-//_firstCell is true if _cell is the first cell of _clus (default value: false)
+//_firstCell is true if _cell is the first cell of _clus 
 //1. create node
 //2. find previous node in cluster
 //3. renew e, q, delta_x, x_ref, (ref_module)
@@ -438,7 +501,7 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
         int delta_x = INT_MIN;
         // find previous node in cluster ( set "all"(not just adjacent ones) previous cells to FIs)->already modified 
         vector<double> FI_positions;
-        FI_positions.reserve(rowHeight);
+        FI_positions.resize(rowHeight,DBL_MAX);
         // renew prev_cells at the same time
         for(int i = 0; i < rowHeight ; i++)   
         {
@@ -455,7 +518,7 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
                 {
                     delta_x = _clus->_delta_x[_iter->second]+_prevNode->_module->width();
                 }
-                FI_positions.push_back(_clus->_delta_x[_iter->second]+_prevNode->_module->width());
+                FI_positions[i] = _clus->_delta_x[_iter->second]+_prevNode->_module->width();
             }
             else    //find previous cell if _clus doesn't have one in rowId = _rowNum+i
             {
@@ -471,6 +534,7 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
         }
         
         //eliminate non adjacent cells
+        
         for(int i = 0 ; i < rowHeight ; i++)
         {
             if(_newNode->getFI(i) != 0 && delta_x-FI_positions[i] > 0.001)
@@ -518,6 +582,7 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
 /////////////////TO-DO/////////////
 // _prevCell is the cell in previous cluster which overlaps with _cell
 // _prevCell and _cell must belongs to different cluster and should overlap
+// assert that _prevCell is the cell in _perclus that has the largest x overlap with _clus
 // will check and possibly modify _rowIdClusterMap and _cellIdClusterMap
 //
 void Placer::AddCluster(Module* _prevCell, Module* _cell)
@@ -530,14 +595,103 @@ void Placer::AddCluster(Module* _prevCell, Module* _cell)
 
     //assert overlap is true
     assert(_prevClus->_x_ref+_prevClus->_delta_x[_prevNodeIndex]+_prevCell->width() > _clus->_x_ref+_clus->_delta_x[_nodeIndex]);
+    double ref_dist = _prevClus->_delta_x[_prevNodeIndex]+_prevCell->width()-_clus->_delta_x[_nodeIndex];
 
-    if(_prevClus->_modules.size() <= _clus->_modules.size())    //ref cell belongs to prevClus
+    if(_prevClus->_modules.size() >= _clus->_modules.size())    //ref cell belongs to prevClus
     {
+        //renew e, q, delta_x, _prevClus->_modules, _cellIdModuleMap
+        _prevClus->_e += _clus->_e;
+        _prevClus->_q +=_clus->_q - (_clus->_e)*(ref_dist);
+        for(unsigned i = 0 ; i < _clus->_modules.size() ; i++)
+        {
+            _prevClus->_modules.push_back(_clus->_modules[i]);
+            _prevClus->_delta_x.push_back(_clus->_delta_x[i]+ref_dist);
+            _prevClus->_cellIdModuleMap[_clus->_modules[i]->_module->dbId()] = _prevClus->_modules.size()-1;
+        }
 
+        //re-establish _lastNode
+        _prevClus->_lastNode.clear();
+        vector<pair<int,int> > lastNodeTemp; //first: index in modules, second: delta_x
+        lastNodeTemp.resize(_cir->numRows(),make_pair(-1,INT_MIN));
+        for(unsigned i = 0 ; i < _prevClus->_modules.size() ; i++)
+        {
+            int rowId = _prevClus->_modules[i]->_rowId;
+            for(int j = rowId ; j < rowId+_prevClus->_modules[i]->_degree ; j++)
+            {
+                if(lastNodeTemp[j].second < _prevClus->_delta_x[i])
+                {
+                    lastNodeTemp[j] = make_pair(i,_prevClus->_delta_x[i]); 
+                }
+            }
+        }
+        for(unsigned i = 0 ; i < _cir->numRows() ; i++)
+        {
+            if(lastNodeTemp[i].second != INT_MIN)   //exist some node
+            {
+                _prevClus->_lastNode[i] = lastNodeTemp[i].first;
+            }
+        }
+
+        //check and modify _rowIdClusterMap and _cellIdClusterMap
+        for(unsigned i = 0 ; i < _rowIdClusterMap.size() ; i++)
+        {
+            if(_rowIdClusterMap[i]==_clus) { _rowIdClusterMap[i] = _prevClus; }
+        }
+        for(unsigned i = 0 ; i < _clus->_modules.size() ; i++)
+        {
+            _cellIdClusterMap[_clus->_modules[i]->_module->dbId()] = _prevClus;    
+        }
+
+        //delete clus
+        delete _clus;
     }
     else    //ref cell belongs to clus
     {
+        //renew e, q, delta_x, _prevClus->_modules, _cellIdModuleMap
+        _clus->_e += _prevClus->_e;
+        _clus->_q += _prevClus->_q + (_prevClus->_e)*(ref_dist);
+        for(unsigned i = 0 ; i < _prevClus->_modules.size() ; i++)
+        {
+            _clus->_modules.push_back(_prevClus->_modules[i]);
+            _clus->_delta_x.push_back(_prevClus->_delta_x[i]-ref_dist);
+            _clus->_cellIdModuleMap[_prevClus->_modules[i]->_module->dbId()] = _clus->_modules.size()-1;
+        }
 
+        //re-establish _lastNode
+        _clus->_lastNode.clear();
+        vector<pair<int,int> > lastNodeTemp; //first: index in modules, second: delta_x
+        lastNodeTemp.resize(_cir->numRows(),make_pair(-1,INT_MIN));
+        for(unsigned i = 0 ; i < _clus->_modules.size() ; i++)
+        {
+            int rowId = _clus->_modules[i]->_rowId;
+            for(int j = rowId ; j < rowId+_clus->_modules[i]->_degree ; j++)
+            {
+                if(lastNodeTemp[j].second < _clus->_delta_x[i])
+                {
+                    lastNodeTemp[j] = make_pair(i,_clus->_delta_x[i]); 
+                }
+            }
+        }
+        for(unsigned i = 0 ; i < _cir->numRows() ; i++)
+        {
+            if(lastNodeTemp[i].second != INT_MIN)   //exist some node
+            {
+                _clus->_lastNode[i] = lastNodeTemp[i].first;
+            }
+        }
+
+        //check and modify _rowIdClusterMap and _cellIdClusterMap
+        for(unsigned i = 0 ; i < _rowIdClusterMap.size() ; i++)
+        {
+            if(_rowIdClusterMap[i]==_prevClus) { _rowIdClusterMap[i] = _clus; }
+        }
+        for(unsigned i = 0 ; i < _prevClus->_modules.size() ; i++)
+        {
+            _cellIdClusterMap[_prevClus->_modules[i]->_module->dbId()] = _clus;    
+        }
+
+        //delete prevClus
+        delete _prevClus;
     }
 }
 

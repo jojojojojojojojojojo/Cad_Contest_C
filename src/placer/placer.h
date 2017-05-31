@@ -86,6 +86,7 @@ public:
     void print_fanins_fanouts(Cluster* _clus) const;
     void print_last_module_name() const;
     void try_area();
+    void try_area2();
     
     /////////////////////////////////////////////////
     //             Operating Functions             //
@@ -116,7 +117,7 @@ private:
 
     vector<int> cell_order;                 // used as legalization order ( _cir->module(cell_order[0]) : first cell )
     vector<Cluster*> _rowIdClusterMap;      // store the last cluster in every row
-    vector<Cluster*> _cellIdClusterMap;     // use to store cell cluster mapping 
+    vector<Cluster*> _cellIdClusterMap;     // use to store cell cluster mapping (index = dbId())
     vector< map<int,int> > prev_cells;      // use this to detect nearby previous cells (id to id)
 
     map<int, Cluster*> _clusters;           // store all clusters
