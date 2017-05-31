@@ -310,6 +310,17 @@ void Placer::print_fanins_fanouts(Cluster* _clus) const
     }
 }
 
+void Placer::print_delat_x(Cluster* _clus) const
+{
+    cout<<"///// Print Delta X of Cluster /////\n";
+    cout<<"ref module position = "<<_clus->_x_ref<<endl;
+    for(unsigned i = 0 ; i < _clus->_modules.size() ; i++)
+    {
+        cout<<"Module Name = "<<_clus->_modules[i]->_module->name();
+        cout<<"; delta_x = "<<_clus->_delta_x[i]<<endl;
+    }
+}
+
 void Placer::print_last_module_name() const
 {
     cout<<" ///// Print last module in each row ///// \n";
@@ -392,7 +403,7 @@ void Placer::try_area()
 
 void Placer::try_area2()
 {
-    int index = 20400;
+    int index = 20480;
     Cluster* _clus = new Cluster();
     Module* _cell = &_cir->module(cell_order[index]);
     cout<<"Cell Name = "<<_cell->name()<<"; X position = "<<_modPLPos[0][cell_order[index]];
@@ -418,8 +429,9 @@ void Placer::try_area2()
     AddCell(_clus,_cell, rowId-1, false);
     cout<<"Cluster position (_x_ref) = "<<_clus->_x_ref<<endl;
 
-    cout<<"Printing Fo FIS\n";
-    print_fanins_fanouts(_clus);
+    //cout<<"Printing Fo FIS\n";
+    //print_fanins_fanouts(_clus);
+    print_delat_x(_clus);
 
     //////////////////////////////////////////////////////////////////////////////////
     cout<<"/////////////////////////\n";
@@ -449,8 +461,16 @@ void Placer::try_area2()
     AddCell(_clus2,_cell, rowId-1, false);
     cout<<"Cluster position (_x_ref) = "<<_clus2->_x_ref<<endl;
 
-    cout<<"Printing Fo FIS\n";
-    print_fanins_fanouts(_clus2);
+    //cout<<"Printing Fo FIS\n";
+    //print_fanins_fanouts(_clus2);
+    print_delat_x(_clus2);
+    ///////////////////////////////////////////////////////
+
+    Cluster* ret_clus = AddCluster(&_cir->module(cell_order[20505]),&_cir->module(cell_order[20112]));
+    print_fanins_fanouts(ret_clus);
+    print_delat_x(ret_clus);
+
+    print_last_module_name();
 }
 
 /////////////////////////////////////////////////
@@ -584,8 +604,9 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
 // _prevCell and _cell must belongs to different cluster and should overlap
 // assert that _prevCell is the cell in _perclus that has the largest x overlap with _clus
 // will check and possibly modify _rowIdClusterMap and _cellIdClusterMap
+// only renew FI and FO of the input cells (will wrong if there are multiple collisions)
 //
-void Placer::AddCluster(Module* _prevCell, Module* _cell)
+Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell)
 {
     Cluster* _prevClus = _cellIdClusterMap[_prevCell->dbId()];
     Cluster* _clus = _cellIdClusterMap[_cell->dbId()];
@@ -593,8 +614,28 @@ void Placer::AddCluster(Module* _prevCell, Module* _cell)
     int _prevNodeIndex = _prevClus->_cellIdModuleMap.find(_prevCell->dbId())->second;
     int _nodeIndex = _clus->_cellIdModuleMap.find(_cell->dbId())->second;
 
+    //renew FI FO of nodes
+    Node* _prevNode = _prevClus->_modules[_prevNodeIndex];
+    Node* _node =  _clus->_modules[_nodeIndex];
+    bool change = false;
+    for(int i = 0 ; i < _node->_degree ; i++)
+    {
+        map<int,int>::iterator ite = prev_cells[_node->_rowId+i].find(_cell->dbId());
+        if(ite != prev_cells[_node->_rowId+i].end() && ite->second == (int)_prevCell->dbId())
+        {
+            change = true;
+            assert(_node->getFI(i)==0);
+            _node->setFI(i,_prevNode);
+            assert(_prevNode->getFO(i+_node->_rowId-_prevNode->_rowId)==0);
+            _prevNode->setFO(i+_node->_rowId-_prevNode->_rowId, _node);
+        }
+    }
+    //assert(change);
+
     //assert overlap is true
-    assert(_prevClus->_x_ref+_prevClus->_delta_x[_prevNodeIndex]+_prevCell->width() > _clus->_x_ref+_clus->_delta_x[_nodeIndex]);
+    //assert(_prevClus->_x_ref+_prevClus->_delta_x[_prevNodeIndex]+_prevCell->width() > _clus->_x_ref+_clus->_delta_x[_nodeIndex]);
+    //cout<<"prev cell pos = "<<_prevClus->_x_ref+_prevClus->_delta_x[_prevNodeIndex]+_prevCell->width()<<endl;
+    //cout<<"cell pos = "<<_clus->_x_ref+_clus->_delta_x[_nodeIndex]<<endl;
     double ref_dist = _prevClus->_delta_x[_prevNodeIndex]+_prevCell->width()-_clus->_delta_x[_nodeIndex];
 
     if(_prevClus->_modules.size() >= _clus->_modules.size())    //ref cell belongs to prevClus
@@ -644,6 +685,11 @@ void Placer::AddCluster(Module* _prevCell, Module* _cell)
 
         //delete clus
         delete _clus;
+
+        //re-evaluate position
+        set_x_to_site(_prevClus);
+
+        return _prevClus;
     }
     else    //ref cell belongs to clus
     {
@@ -692,6 +738,11 @@ void Placer::AddCluster(Module* _prevCell, Module* _cell)
 
         //delete prevClus
         delete _prevClus;
+
+        //re-evaluate position
+        set_x_to_site(_clus);
+
+        return _clus;
     }
 }
 
@@ -730,9 +781,9 @@ Node* Placer::CheckOverlap(Cluster* _clus)
     Node* ref = _clus->_ref_module;
     if(ref->_fanins.empty()) return 0;
     
-    Node* overlap;
+    Node* overlap = 0;
     int area = INT_MAX;
-    for(int i = 0 ; i < ref->_fanins.size() ; i++){
+    for(unsigned i = 0 ; i < ref->_fanins.size() ; i++){
         int top, bot, temp;
         top = min(( ref->_rowId + ref->_degree ) , ( ref->_fanins[i]->_rowId + ref->_fanins[i]->_degree ));
         bot = max( ref->_rowId , ref->_fanins[i]->_rowId );

@@ -84,6 +84,7 @@ public:
     /////////////////////////////////////////////
     void print_cell_order() const;
     void print_fanins_fanouts(Cluster* _clus) const;
+    void print_delat_x(Cluster* _clus) const;
     void print_last_module_name() const;
     void try_area();
     void try_area2();
@@ -94,7 +95,7 @@ public:
 
     //change return type and input variables if neccessary
     void AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell);
-    void AddCluster(Module* _prevCell, Module* _cell);
+    Cluster* AddCluster(Module* _prevCell, Module* _cell);
     void Decluster();
     void RenewPosition(Cluster &c1);
     double RenewCost(Cluster &c1);         //return new cost
