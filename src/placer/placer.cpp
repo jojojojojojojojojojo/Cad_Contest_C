@@ -725,10 +725,24 @@ Cluster* Placer::Collapse()
     return 0;
 }
 
-vector<int> Placer::CheckOverlap()
+Node* Placer::CheckOverlap(Cluster* _clus)
 {
-    vector<int> _modulesIndex;
-    return _modulesIndex;
+    Node* ref = _clus->_ref_module;
+    if(ref->_fanins.empty()) return 0;
+    
+    Node* overlap;
+    int area = INT_MAX;
+    for(int i = 0 ; i < ref->_fanins.size() ; i++){
+        int top, bot, temp;
+        top = min(( ref->_rowId + ref->_degree ) , ( ref->_fanins[i]->_rowId + ref->_fanins[i]->_degree ));
+        bot = max( ref->_rowId , ref->_fanins[i]->_rowId );
+        temp = (top-bot) * (ref->_fanins[i]->_module->x() + ref->_fanins[i]->_module->width() - ref->_module->x());
+        if( area > temp){
+            area = temp;
+            overlap = ref->_fanins[i];
+        }
+    }
+    return overlap;
 }
 
 void Placer::set_x_to_site(Cluster* _clus)
