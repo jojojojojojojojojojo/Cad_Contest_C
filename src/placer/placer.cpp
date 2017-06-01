@@ -764,62 +764,53 @@ void Placer::RenewPosition(Cluster &c1)
 
 double Placer::RenewCost(Cluster &c1)   
 {
-    c1._cost = 0; // already had a data member "cost" in class cluster, we can just store cost in there
+    int _cost = 0; // already had a data member "cost" in class cluster, we can just store cost in there
+                   // need to return new cost & compare, so I can't store in c1._cost, right? 
     for(size_t i = 0 ; i < c1._modules.size() ; i++){
-        c1._cost += abs(c1._modules[i]->_module->x()-_modPLPos[0][c1._modules[i]->_module->dbId()].x()) + abs(c1._modules[i]->_module->y()-_modPLPos[0][c1._modules[i]->_module->dbId()].y());
+        _cost += abs(c1._modules[i]->_x_ref+c1._delta_x[i]-_modPLPos[0][c1._modules[i]->_module->dbId()].x()) 
+        _cost += abs(c1._modules[i]->_module->y()-_modPLPos[0][c1._modules[i]->_module->dbId()].y());
+        // how about y ? where should we store the temporary y of all cells ?
     }
-    return c1._cost;
+    return _cost;
 }
 
 Cluster* Placer::Collapse()
 {
-    //double x_c = _q/_e;
-    //if(x_c < 0) x_c = 0;
-    //if(x_c > _cir->row(0).width() - _cluster_width) x_c = row(0).width() - _cluster_width; //_cluster_width ??
-
-    while(CheckOverlap(this)!=0){
-        Node* _overlap = CheckOverlap(this);
-        Cluster* _prevClus = _cellIdClusterMap[_overlap->_module->dbId()];
-        AddCluster(_overlap,); // overlap module in this cluster ??
+    pair<int,int> _overlap = CheckOverlap(this);
+    while(get<0>(_overlap)!=0 || get<1>(_overlap)!=0){
+        AddCluster(get<0>(_overlap),get<1>(_overlap)); 
         _prevClus->Collapse();
     }
     return 0;
 }
 
-Node* Placer::CheckOverlap(Cluster* _clus)
+pair<int,int> Placer::CheckOverlap(Cluster* _clus)
 {
-    
-    // find every prev_cell in every row
-    // want to find easier way, the problem is how to get the rowIds the cluster covers
-    vector<int> all_overlap;
+    pair<int,int> overlap;
+    overlap = make_pair(0,0);
+    int _x_max = 0;
+
     for(int i = 0 ; i < _clus->_modules.size() ; i++){
-        int ref = _clus->_modules[i]->_module->dbId();
-        int ref_next = ref;
+        int ref = _clus->_modules[i]->_module->dbId(); //overlap cell id in prev cluster
+        int ref_next = ref;                            //overlap cell id in _clus
         int row = _clus->_modules[i]->_rowId;
         for(int j = row ; j < row + _clus->_modules[i]->_degree ; j++){
-            while(_cellIdClusterMap[ref]->id == _clus->id){ 
-                ref_next = ref;
-                ref = _cir->prev_cells[j].find(ref)->second;
-            }
-            if(all_overlap.find(ref)==last) all_overlap.push_back(ref);
-        }
-    }
+            ref = _cir->prev_cells[j].find(ref)->second;    // if this cell is the first cell in the row ?
+            if(_cellIdClusterMap[ref]->id != _clus->id){
+                int x_ref = _cellIdClusterMap[ref]->_x_ref;
+                x_ref += _cellIdClusterMap[ref]->_delta_x[_cellIdClusterMap[ref]->_cellIdModuleMap.find(ref)->second];
+                x_ref += _cir->module(ref).width();
 
-    // decide the cell that overlaps most
-    
-    Node* overlap = 0;
-    int area = INT_MAX;
-    for(unsigned i = 0 ; i < ref->_fanins.size() ; i++){
-        int top, bot, temp;
-        top = min(( ref->_rowId + ref->_degree ) , ( ref->_fanins[i]->_rowId + ref->_fanins[i]->_degree ));
-        bot = max( ref->_rowId , ref->_fanins[i]->_rowId );
-        temp = (top-bot) * (ref->_fanins[i]->_module->x() + ref->_fanins[i]->_module->width() - ref->_module->x());
-        if( area > temp){
-            area = temp;
-            overlap = ref->_fanins[i];
+                int x_ref_next = _clus->_delta_x[_clus->_cellIdModuleMap.find(ref_next)->second] + _clus->_x_ref;
+
+                if(x_ref_next < x_ref && (x_ref-x_ref_next) > _x_max){
+                    _x_max = x_ref-x_ref_next;
+                    overlap = make_pair(ref,ref_next);
+                }
+            }
         }
     }
-    return overlap;
+    return overlap; // return (0,0) if no overlap occurs
 }
 
 void Placer::set_x_to_site(Cluster* _clus)
