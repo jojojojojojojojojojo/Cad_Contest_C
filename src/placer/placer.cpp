@@ -568,13 +568,39 @@ double Placer::RenewCost(Cluster &c1)
 
 Cluster* Placer::Collapse()
 {
+    //double x_c = _q/_e;
+    //if(x_c < 0) x_c = 0;
+    //if(x_c > _cir->row(0).width() - _cluster_width) x_c = row(0).width() - _cluster_width; //_cluster_width ??
+
+    while(CheckOverlap(this)!=0){
+        Node* _overlap = CheckOverlap(this);
+        Cluster* _prevClus = _cellIdClusterMap[_overlap->_module->dbId()];
+        AddCluster(_overlap,); // overlap module in this cluster ??
+        _prevClus->Collapse();
+    }
     return 0;
 }
 
 Node* Placer::CheckOverlap(Cluster* _clus)
 {
-    Node* ref = _clus->_ref_module;
-    if(ref->_fanins.empty()) return 0;
+    
+    // find every prev_cell in every row
+    // want to find easier way, the problem is how to get the rowIds the cluster covers
+    vector<int> all_overlap;
+    for(int i = 0 ; i < _clus->_modules.size() ; i++){
+        int ref = _clus->_modules[i]->_module->dbId();
+        int ref_next = ref;
+        int row = _clus->_modules[i]->_rowId;
+        for(int j = row ; j < row + _clus->_modules[i]->_degree ; j++){
+            while(_cellIdClusterMap[ref]->id == _clus->id){ 
+                ref_next = ref;
+                ref = _cir->prev_cells[j].find(ref)->second;
+            }
+            if(all_overlap.find(ref)==last) all_overlap.push_back(ref);
+        }
+    }
+
+    // decide the cell that overlaps most
     
     Node* overlap;
     int area = INT_MAX;
