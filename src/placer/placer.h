@@ -99,7 +99,7 @@ public:
     void Decluster();
     void RenewPosition(Cluster &c1);
     double RenewCost(Cluster &c1);         //return new cost
-    Cluster* Collapse();
+    Cluster* Collapse(Cluster* _clus);
     pair<int,int> CheckOverlap(Cluster* _clus) ; //return vector of index (_modules[index]) overlapping with other cells 
     void set_x_to_site(Cluster* _clus);
 

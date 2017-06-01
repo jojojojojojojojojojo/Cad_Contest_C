@@ -767,19 +767,18 @@ double Placer::RenewCost(Cluster &c1)
     int _cost = 0; // already had a data member "cost" in class cluster, we can just store cost in there
                    // need to return new cost & compare, so I can't store in c1._cost, right? 
     for(size_t i = 0 ; i < c1._modules.size() ; i++){
-        _cost += abs(c1._modules[i]->_x_ref+c1._delta_x[i]-_modPLPos[0][c1._modules[i]->_module->dbId()].x()) 
+        _cost += abs(c1._x_ref+c1._delta_x[i]-_modPLPos[0][c1._modules[i]->_module->dbId()].x()); 
         _cost += abs(c1._modules[i]->_module->y()-_modPLPos[0][c1._modules[i]->_module->dbId()].y());
         // how about y ? where should we store the temporary y of all cells ?
     }
     return _cost;
 }
 
-Cluster* Placer::Collapse()
+Cluster* Placer::Collapse(Cluster* _clus)
 {
-    pair<int,int> _overlap = CheckOverlap(this);
+    pair<int,int> _overlap = CheckOverlap(_clus);
     while(get<0>(_overlap)!=0 || get<1>(_overlap)!=0){
-        AddCluster(get<0>(_overlap),get<1>(_overlap)); 
-        _prevClus->Collapse();
+        Collapse(AddCluster(&_cir->module(get<0>(_overlap)),&_cir->module(get<1>(_overlap))));
     }
     return 0;
 }
@@ -795,7 +794,7 @@ pair<int,int> Placer::CheckOverlap(Cluster* _clus)
         int ref_next = ref;                            //overlap cell id in _clus
         int row = _clus->_modules[i]->_rowId;
         for(int j = row ; j < row + _clus->_modules[i]->_degree ; j++){
-            ref = _cir->prev_cells[j].find(ref)->second;    // if this cell is the first cell in the row ?
+            ref = prev_cells[j].find(ref)->second;    // if this cell is the first cell in the row ?
             if(_cellIdClusterMap[ref]->id != _clus->id){
                 int x_ref = _cellIdClusterMap[ref]->_x_ref;
                 x_ref += _cellIdClusterMap[ref]->_delta_x[_cellIdClusterMap[ref]->_cellIdModuleMap.find(ref)->second];
