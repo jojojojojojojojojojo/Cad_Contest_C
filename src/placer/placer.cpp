@@ -778,9 +778,11 @@ Cluster* Placer::Collapse(Cluster* _clus)
 {
     pair<int,int> _overlap = CheckOverlap(_clus);
     while(get<0>(_overlap)!=0 || get<1>(_overlap)!=0){
-        Collapse(AddCluster(&_cir->module(get<0>(_overlap)),&_cir->module(get<1>(_overlap))));
+        _overlap = CheckOverlap(_clus);
+        _clus = AddCluster(&_cir->module(get<0>(_overlap)),&_cir->module(get<1>(_overlap)));
+        Collapse(_clus);
     }
-    return 0;
+    return _clus;
 }
 
 pair<int,int> Placer::CheckOverlap(Cluster* _clus)
