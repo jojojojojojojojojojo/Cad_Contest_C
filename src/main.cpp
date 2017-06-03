@@ -43,7 +43,8 @@ int main( int argc, char ** argv )
     placer.sort_cells();
 
     //placer.print_cell_order();
-    placer.try_area2();
+    placer.try_area();
+    //placer.try_area2();
 
     cout<<" HPWL = "<<placer.compute_hpwl()<<endl;
 

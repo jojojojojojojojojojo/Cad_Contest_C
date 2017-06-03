@@ -300,6 +300,7 @@ void Placer::print_cell_order() const
     }
 }
 
+/*
 void Placer::print_fanins_fanouts(Cluster* _clus) const
 {
     cout<<"///// Print Fanins Fanouts of a cluster /////\n";
@@ -309,6 +310,7 @@ void Placer::print_fanins_fanouts(Cluster* _clus) const
         _clus->_modules[i]->printFO();
     }
 }
+*/
 
 void Placer::print_delat_x(Cluster* _clus) const
 {
@@ -338,8 +340,11 @@ void Placer::print_last_module_name() const
 //this area is made just to try some functionalities of the code
 void Placer::try_area()
 {
+    cout<<"Number Of modules = "<<_cir->numModules()<<endl;
+    cin.get();
     for(unsigned i = 0 ; i < _cir->numModules() ; i++)
     {
+        cout<<"Placing Module number : "<<i<<endl;
         if(!_cir->module(cell_order[i]).isStdCell()) continue;
 
         Module* _cell = &_cir->module(cell_order[i]);
@@ -358,7 +363,7 @@ void Placer::try_area()
         {
             if(_rowIdClusterMap[rowNum+j] == 0) continue;
             Cluster* _lastClus = _rowIdClusterMap[rowNum+j];
-            int index = (_lastClus->_lastNode.find(rowNum+i))->second;
+            int index = (_lastClus->_lastNode.find(rowNum+j))->second;
             int rightmost_x = _lastClus->_x_ref + _lastClus->_delta_x[index] + _lastClus->_modules[index]->_module->width();
             /*
             cout<<"_x_ref of cluster = "<<_lastClus->_x_ref<<endl;
@@ -367,9 +372,13 @@ void Placer::try_area()
             cout<<"_cell->x() = "<<_cell->x()<<endl;
             cin.get();
             */
-            if(rightmost_x > maxX )//&& rightmost_x > (_cell->x()) ) 
+            if(rightmost_x > maxX ) 
             {
-                _cluster = _lastClus;
+                maxX = rightmost_x;
+                if(rightmost_x > (_cell->x()))
+                {
+                    _cluster = _lastClus;
+                }
             }
         }
         if(_cluster == 0) // new cluster
@@ -377,13 +386,17 @@ void Placer::try_area()
             _cluster = new Cluster();
             _clusters[_cluster->id] = _cluster;
             AddCell(_cluster, _cell, rowNum, true);
+            //Collapse(_cluster);
             //cout<<"New Cluster! _x_ref = "<<_cluster->_x_ref<<endl;
         }
         else              // add to _cluster
         {
             AddCell(_cluster, _cell, rowNum, false);
+            Collapse(_cluster);
         }
     }
+
+    cout<<"Now renew Position\n";
 
     /*
     for(map<int,Cluster*>::iterator iter = _clusters.begin() ; iter != _clusters.end() ; ++iter)
@@ -442,7 +455,7 @@ void Placer::try_area2()
     cout<<"; #Row = "<<(int)(_cell->height()/_cir->rowHeight())<<"; width = "<<_cell->width()<<endl;
     //rowId = _cir->y_2_row_id(_cell->y());
 
-    AddCell(_clus2,_cell, rowId, true);
+    AddCell(_clus2,_cell, rowId-1, true);
     cout<<"Cluster position (_x_ref) = "<<_clus2->_x_ref<<endl;
     
     index = 20500;
@@ -450,7 +463,7 @@ void Placer::try_area2()
     cout<<"Cell Name = "<<_cell->name()<<"; X position = "<<_modPLPos[0][cell_order[index]];
     cout<<"; #Row = "<<(int)(_cell->height()/_cir->rowHeight())<<"; width = "<<_cell->width()<<endl;
 
-    AddCell(_clus2,_cell, rowId-1, false);
+    AddCell(_clus2,_cell, rowId-2, false);
     cout<<"Cluster position (_x_ref) = "<<_clus2->_x_ref<<endl;
 
     index = 20505;
@@ -458,7 +471,7 @@ void Placer::try_area2()
     cout<<"Cell Name = "<<_cell->name()<<"; X position = "<<_modPLPos[0][cell_order[index]];
     cout<<"; #Row = "<<(int)(_cell->height()/_cir->rowHeight())<<"; width = "<<_cell->width()<<endl;
 
-    AddCell(_clus2,_cell, rowId-1, false);
+    AddCell(_clus2,_cell, rowId-2, false);
     cout<<"Cluster position (_x_ref) = "<<_clus2->_x_ref<<endl;
 
     //cout<<"Printing Fo FIS\n";
@@ -466,8 +479,9 @@ void Placer::try_area2()
     print_delat_x(_clus2);
     ///////////////////////////////////////////////////////
 
-    Cluster* ret_clus = AddCluster(&_cir->module(cell_order[20505]),&_cir->module(cell_order[20112]));
-    print_fanins_fanouts(ret_clus);
+    //Cluster* ret_clus = AddCluster(&_cir->module(cell_order[20490]),&_cir->module(cell_order[20495]));
+    Cluster* ret_clus = Collapse(_clus2);
+    //print_fanins_fanouts(ret_clus);
     print_delat_x(ret_clus);
 
     print_last_module_name();
@@ -487,6 +501,7 @@ void Placer::try_area2()
 //This Function only adds cells at the end, and shouldn't add cell in the middle or start of the cluster
 void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell)
 {
+    //cout<<"Addcell\n";
     assert(_cell->isStdCell()); //assert is standard cell (module includes preplaced blocks, I/O pins)
     int rowHeight = (int)(_cell->height()/_cir->rowHeight());
     Node* _newNode = new Node(_cell, rowHeight, _rowNum);
@@ -520,8 +535,12 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
     {
         int delta_x = INT_MIN;
         // find previous node in cluster ( set "all"(not just adjacent ones) previous cells to FIs)->already modified 
+
+        /*
         vector<double> FI_positions;
         FI_positions.resize(rowHeight,DBL_MAX);
+        */
+
         // renew prev_cells at the same time
         for(int i = 0; i < rowHeight ; i++)   
         {
@@ -529,16 +548,16 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
             if(_iter != _clus->_lastNode.end())    //find previous node
             {
                 Node* _prevNode = _clus->_modules[_iter->second];
-                int index = (_rowNum+i)-_prevNode->_rowId;
-                assert(index >=0 && index < _prevNode->_degree && _prevNode->getFO(index) == 0);
-                _prevNode->setFO(index,_newNode);
-                _newNode->setFI(i,_prevNode);
+                //int index = (_rowNum+i)-_prevNode->_rowId;
+                //assert(index >=0 && index < _prevNode->_degree && _prevNode->getFO(index) == 0);
+                //_prevNode->setFO(index,_newNode);
+                //_newNode->setFI(i,_prevNode);
                 prev_cells[_rowNum+i][_cell->dbId()] = _prevNode->_module->dbId();
                 if(_clus->_delta_x[_iter->second]+_prevNode->_module->width() > delta_x)
                 {
                     delta_x = _clus->_delta_x[_iter->second]+_prevNode->_module->width();
                 }
-                FI_positions[i] = _clus->_delta_x[_iter->second]+_prevNode->_module->width();
+                //FI_positions[i] = _clus->_delta_x[_iter->second]+_prevNode->_module->width();
             }
             else    //find previous cell if _clus doesn't have one in rowId = _rowNum+i
             {
@@ -554,7 +573,7 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
         }
         
         //eliminate non adjacent cells
-        
+        /*
         for(int i = 0 ; i < rowHeight ; i++)
         {
             if(_newNode->getFI(i) != 0 && delta_x-FI_positions[i] > 0.001)
@@ -565,6 +584,7 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
                 _newNode->setFI(i,0);
             }
         }
+        */
 
         assert(delta_x != INT_MIN);
         // renew _clus->_delta_x
@@ -597,6 +617,8 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
 
     // renew _x_ref
     set_x_to_site(_clus);
+
+    //cout<<"Add cell done\n";
 }
 
 /////////////////TO-DO/////////////
@@ -608,6 +630,7 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
 //
 Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell)
 {
+    //cout<<"Add Cluster\n";
     Cluster* _prevClus = _cellIdClusterMap[_prevCell->dbId()];
     Cluster* _clus = _cellIdClusterMap[_cell->dbId()];
     assert(_prevClus != 0 && _clus != 0 && _prevClus != _clus);
@@ -615,6 +638,7 @@ Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell)
     int _nodeIndex = _clus->_cellIdModuleMap.find(_cell->dbId())->second;
 
     //renew FI FO of nodes
+    /*
     Node* _prevNode = _prevClus->_modules[_prevNodeIndex];
     Node* _node =  _clus->_modules[_nodeIndex];
     bool change = false;
@@ -631,9 +655,11 @@ Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell)
         }
     }
     //assert(change);
+    */
 
     //assert overlap is true
-    //assert(_prevClus->_x_ref+_prevClus->_delta_x[_prevNodeIndex]+_prevCell->width() > _clus->_x_ref+_clus->_delta_x[_nodeIndex]);
+    assert(_prevClus->_x_ref+_prevClus->_delta_x[_prevNodeIndex]+_prevCell->width() > _clus->_x_ref+_clus->_delta_x[_nodeIndex]);
+
     //cout<<"prev cell pos = "<<_prevClus->_x_ref+_prevClus->_delta_x[_prevNodeIndex]+_prevCell->width()<<endl;
     //cout<<"cell pos = "<<_clus->_x_ref+_clus->_delta_x[_nodeIndex]<<endl;
     double ref_dist = _prevClus->_delta_x[_prevNodeIndex]+_prevCell->width()-_clus->_delta_x[_nodeIndex];
@@ -684,6 +710,7 @@ Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell)
         }
 
         //delete clus
+        _clusters.erase(_clus->id);
         delete _clus;
 
         //re-evaluate position
@@ -737,6 +764,7 @@ Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell)
         }
 
         //delete prevClus
+        _clusters.erase(_prevClus->id);
         delete _prevClus;
 
         //re-evaluate position
@@ -753,6 +781,7 @@ void Placer::Decluster()
 
 void Placer::RenewPosition(Cluster &c1) 
 {
+    //cout<<"renew position cluster : "<<c1.id<<endl;
     for(size_t i = 0 ; i < c1._modules.size() ; i++){
         Point pos(c1._x_ref+c1._delta_x[i],_cir->row_id_2_y(c1._modules[i]->_rowId));
         if(c1._modules[i]->_degree%2)
@@ -768,20 +797,24 @@ double Placer::RenewCost(Cluster &c1)
                    // need to return new cost & compare, so I can't store in c1._cost, right? 
     for(size_t i = 0 ; i < c1._modules.size() ; i++){
         _cost += abs(c1._x_ref+c1._delta_x[i]-_modPLPos[0][c1._modules[i]->_module->dbId()].x()); 
-        _cost += abs(c1._modules[i]->_module->y()-_modPLPos[0][c1._modules[i]->_module->dbId()].y());
-        // how about y ? where should we store the temporary y of all cells ?
+        _cost += abs(_cir->row_id_2_y(c1._modules[i]->_rowId)-_modPLPos[0][c1._modules[i]->_module->dbId()].y());
+        // how about y ? where should we store the temporary y of all cells ? ans: in node's rowId
     }
     return _cost;
 }
 
 Cluster* Placer::Collapse(Cluster* _clus)
 {
+    //cout<<"Collapsing: ";
     pair<int,int> _overlap = CheckOverlap(_clus);
-    while(get<0>(_overlap)!=0 || get<1>(_overlap)!=0){
-        _overlap = CheckOverlap(_clus);
+    //cout<<"CheckOverlap done\n";
+    if(get<0>(_overlap)!=0 || get<1>(_overlap)!=0){
+        //_overlap = CheckOverlap(_clus);
         _clus = AddCluster(&_cir->module(get<0>(_overlap)),&_cir->module(get<1>(_overlap)));
-        Collapse(_clus);
+        _clus = Collapse(_clus);
     }
+    _overlap = CheckOverlap(_clus);
+    assert(_overlap == make_pair(0,0));
     return _clus;
 }
 
@@ -790,23 +823,27 @@ pair<int,int> Placer::CheckOverlap(Cluster* _clus)
     pair<int,int> overlap;
     overlap = make_pair(0,0);
     int _x_max = 0;
+    map<int,int>::iterator iter ;
 
-    for(int i = 0 ; i < _clus->_modules.size() ; i++){
-        int ref = _clus->_modules[i]->_module->dbId(); //overlap cell id in prev cluster
-        int ref_next = ref;                            //overlap cell id in _clus
+    for(unsigned i = 0 ; i < _clus->_modules.size() ; i++){
+        int ref = _clus->_modules[i]->_module->dbId(); //overlap cell id in _clus
+        int ref_prev = -1;                             //overlap cell id in prev clus
         int row = _clus->_modules[i]->_rowId;
         for(int j = row ; j < row + _clus->_modules[i]->_degree ; j++){
-            ref = prev_cells[j].find(ref)->second;    // if this cell is the first cell in the row ?
-            if(_cellIdClusterMap[ref]->id != _clus->id){
-                int x_ref = _cellIdClusterMap[ref]->_x_ref;
-                x_ref += _cellIdClusterMap[ref]->_delta_x[_cellIdClusterMap[ref]->_cellIdModuleMap.find(ref)->second];
-                x_ref += _cir->module(ref).width();
+            iter = prev_cells[j].find(ref);
+            if(iter == prev_cells[j].end()) { continue; }
+            ref_prev = iter->second;    // if this cell is the first cell in the row ? ans: then find will return map::end()
+            if(_cellIdClusterMap[ref_prev]->id != _clus->id){
+                int x_ref = _cellIdClusterMap[ref_prev]->_x_ref;
+                x_ref += _cellIdClusterMap[ref_prev]->_delta_x[_cellIdClusterMap[ref_prev]->_cellIdModuleMap.find(ref_prev)->second];
+                x_ref += _cir->module(ref_prev).width();
 
-                int x_ref_next = _clus->_delta_x[_clus->_cellIdModuleMap.find(ref_next)->second] + _clus->_x_ref;
+                //int x_ref_next = _clus->_delta_x[_clus->_cellIdModuleMap.find(ref_next)->second] + _clus->_x_ref;
+                int x_ref_next = _clus->_delta_x[i] + _clus->_x_ref;
 
                 if(x_ref_next < x_ref && (x_ref-x_ref_next) > _x_max){
                     _x_max = x_ref-x_ref_next;
-                    overlap = make_pair(ref,ref_next);
+                    overlap = make_pair(ref_prev,ref);
                 }
             }
         }

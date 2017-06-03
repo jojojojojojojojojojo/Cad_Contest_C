@@ -1,5 +1,5 @@
 #include "node.h"
-
+/*
 unsigned Node::_globalref = 0;
 
 void Node::clearFIFO()
@@ -93,3 +93,4 @@ void Node::DFS_to_PI()
       	}
    	}
 }
+*/

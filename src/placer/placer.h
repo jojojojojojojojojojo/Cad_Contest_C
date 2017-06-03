@@ -83,7 +83,7 @@ public:
     // Debug Use Functions
     /////////////////////////////////////////////
     void print_cell_order() const;
-    void print_fanins_fanouts(Cluster* _clus) const;
+    //void print_fanins_fanouts(Cluster* _clus) const;
     void print_delat_x(Cluster* _clus) const;
     void print_last_module_name() const;
     void try_area();
@@ -100,7 +100,7 @@ public:
     void RenewPosition(Cluster &c1);
     double RenewCost(Cluster &c1);         //return new cost
     Cluster* Collapse(Cluster* _clus);
-    pair<int,int> CheckOverlap(Cluster* _clus) ; //return vector of index (_modules[index]) overlapping with other cells 
+    pair<int,int> CheckOverlap(Cluster* _clus) ; //return pair of index (_modules[index]) overlapping with other cells 
     void set_x_to_site(Cluster* _clus);
 
 
@@ -119,7 +119,7 @@ private:
     vector<int> cell_order;                 // used as legalization order ( _cir->module(cell_order[0]) : first cell )
     vector<Cluster*> _rowIdClusterMap;      // store the last cluster in every row
     vector<Cluster*> _cellIdClusterMap;     // use to store cell cluster mapping (index = dbId())
-    vector< map<int,int> > prev_cells;      // use this to detect nearby previous cells (id to id)
+    vector< map<int,int> > prev_cells;      // use this to detect nearby previous cells (this cell id to prev cell id)
 
     map<int, Cluster*> _clusters;           // store all clusters
 };
