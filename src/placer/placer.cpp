@@ -312,7 +312,7 @@ void Placer::print_fanins_fanouts(Cluster* _clus) const
 }
 */
 
-void Placer::print_delat_x(Cluster* _clus) const
+void Placer::print_delta_x(Cluster* _clus) const
 {
     cout<<"///// Print Delta X of Cluster /////\n";
     cout<<"ref module position = "<<_clus->_x_ref<<endl;
@@ -337,11 +337,68 @@ void Placer::print_last_module_name() const
     }
 }
 
+bool Placer::check_cluster_internal_overlap(Cluster* _clus)
+{
+    cout<<"Check\n";
+    vector< vector< pair<int,double > > > temp_nodes;
+    temp_nodes.resize(_cir->numRows());
+    bool isOverlap = false;
+
+    for(unsigned i = 0 ; i < _clus->_modules.size() ; i++)
+    {
+        //cout<<"degree = "<<_clus->_modules[i]->_degree <<endl;
+        for(int j = 0 ; j < _clus->_modules[i]->_degree ; j++)
+        {
+            //cout<<"_clus->_modules[i]->_rowId+j = "<<_clus->_modules[i]->_rowId+j<<endl;
+            //assert(_clus->_modules[i]->_rowId+j < _cir->numRows());
+            temp_nodes[_clus->_modules[i]->_rowId+j].push_back(make_pair(i,_clus->_delta_x[i]));
+        }
+    }
+    //cout<<"1";
+
+    for(unsigned i = 0 ; i < _cir->numRows() ; i++)
+    {
+        sort(temp_nodes[i].begin(), temp_nodes[i].end(), pair_compare);
+    }
+    //cout<<"2";
+
+    for(unsigned i = 0 ; i < _cir->numRows() ; i++)
+    {
+        if(temp_nodes[i].empty()) { continue; }
+        for(unsigned j = 0 ; j < temp_nodes[i].size()-1 ; j++)
+        {
+            int index = temp_nodes[i][j].first;
+            int next_index = temp_nodes[i][j+1].first;
+            if(_clus->_delta_x[index]+_clus->_modules[index]->_module->width() > _clus->_delta_x[next_index])
+            {
+                isOverlap = true;
+                cout<<"\nOverlap Ocurred in row #"<<i<<endl;
+                cout<<"Module : < "<<_clus->_modules[index]->_module->name()<<" > overlaps with ";
+                cout<<"module : <  "<<_clus->_modules[next_index]->_module->name()<<" >"<<endl;
+                cout<<"First Module position = "<<_clus->_delta_x[index]+_clus->_x_ref<<endl;
+                cout<<"Second Module position = "<<_clus->_delta_x[next_index]+_clus->_x_ref<<endl;
+                cout<<"First Module Width = "<<_clus->_modules[index]->_module->width()<<endl;
+                int prev_id = prev_cells[i].find(_clus->_modules[next_index]->_module->dbId())->second;
+                cout<<"But Prev Module : < "<<_cir->module(prev_id).name()<<" >\n";
+                Cluster* _prevClus = _cellIdClusterMap[prev_id];
+                int inclusIndex = _prevClus->_cellIdModuleMap.find(prev_id)->second;
+                cout<<"Prev Module position = "<<_prevClus->_delta_x[inclusIndex]+_prevClus->_x_ref<<endl;
+                cout<<"Prev Module Width = "<<_prevClus->_modules[inclusIndex]->_module->width()<<endl;
+                //break;
+            }
+        }
+        //if(isOverlap) { break; }
+    }
+    //cout<<"end\n";
+
+    return isOverlap;
+}
+
 //this area is made just to try some functionalities of the code
 void Placer::try_area()
 {
     cout<<"Number Of modules = "<<_cir->numModules()<<endl;
-    cin.get();
+    //cin.get();
     for(unsigned i = 0 ; i < _cir->numModules() ; i++)
     {
         cout<<"Placing Module number : "<<i<<endl;
@@ -375,7 +432,7 @@ void Placer::try_area()
             if(rightmost_x > maxX ) 
             {
                 maxX = rightmost_x;
-                if(rightmost_x > (_cell->x()))
+                if(rightmost_x > (_modPLPos[0][_cell->dbId()].x()))
                 {
                     _cluster = _lastClus;
                 }
@@ -386,14 +443,14 @@ void Placer::try_area()
             _cluster = new Cluster();
             _clusters[_cluster->id] = _cluster;
             AddCell(_cluster, _cell, rowNum, true);
-            //Collapse(_cluster);
             //cout<<"New Cluster! _x_ref = "<<_cluster->_x_ref<<endl;
         }
         else              // add to _cluster
         {
             AddCell(_cluster, _cell, rowNum, false);
-            Collapse(_cluster);
+            _cluster = Collapse(_cluster);//,i==18363);
         }
+        assert(!check_cluster_internal_overlap(_cluster));
     }
 
     cout<<"Now renew Position\n";
@@ -444,7 +501,7 @@ void Placer::try_area2()
 
     //cout<<"Printing Fo FIS\n";
     //print_fanins_fanouts(_clus);
-    print_delat_x(_clus);
+    print_delta_x(_clus);
 
     //////////////////////////////////////////////////////////////////////////////////
     cout<<"/////////////////////////\n";
@@ -476,15 +533,17 @@ void Placer::try_area2()
 
     //cout<<"Printing Fo FIS\n";
     //print_fanins_fanouts(_clus2);
-    print_delat_x(_clus2);
+    print_delta_x(_clus2);
     ///////////////////////////////////////////////////////
 
     //Cluster* ret_clus = AddCluster(&_cir->module(cell_order[20490]),&_cir->module(cell_order[20495]));
     Cluster* ret_clus = Collapse(_clus2);
     //print_fanins_fanouts(ret_clus);
-    print_delat_x(ret_clus);
+    print_delta_x(ret_clus);
 
     print_last_module_name();
+
+    check_cluster_internal_overlap(ret_clus);
 }
 
 /////////////////////////////////////////////////
@@ -528,6 +587,7 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
                 int nodeIndex = (_prevClus->_lastNode.find(_rowNum+i))->second;
                 Node* _prevNode = _prevClus->_modules[nodeIndex];
                 prev_cells[_rowNum+i][_cell->dbId()] = _prevNode->_module->dbId();
+                next_cells[_rowNum+i][_prevNode->_module->dbId()] = _cell->dbId();
             }
         }
     }
@@ -553,6 +613,7 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
                 //_prevNode->setFO(index,_newNode);
                 //_newNode->setFI(i,_prevNode);
                 prev_cells[_rowNum+i][_cell->dbId()] = _prevNode->_module->dbId();
+                next_cells[_rowNum+i][_prevNode->_module->dbId()] = _cell->dbId();
                 if(_clus->_delta_x[_iter->second]+_prevNode->_module->width() > delta_x)
                 {
                     delta_x = _clus->_delta_x[_iter->second]+_prevNode->_module->width();
@@ -568,6 +629,7 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
                     int nodeIndex = (_prevClus->_lastNode.find(_rowNum+i))->second;
                     Node* _prevNode = _prevClus->_modules[nodeIndex];
                     prev_cells[_rowNum+i][_cell->dbId()] = _prevNode->_module->dbId();
+                    next_cells[_rowNum+i][_prevNode->_module->dbId()] = _cell->dbId();
                 }
             }
         }
@@ -803,7 +865,7 @@ double Placer::RenewCost(Cluster &c1)
     return _cost;
 }
 
-Cluster* Placer::Collapse(Cluster* _clus)
+Cluster* Placer::Collapse(Cluster* _clus, bool check)
 {
     //cout<<"Collapsing: ";
     pair<int,int> _overlap = CheckOverlap(_clus);
@@ -811,7 +873,8 @@ Cluster* Placer::Collapse(Cluster* _clus)
     if(get<0>(_overlap)!=0 || get<1>(_overlap)!=0){
         //_overlap = CheckOverlap(_clus);
         _clus = AddCluster(&_cir->module(get<0>(_overlap)),&_cir->module(get<1>(_overlap)));
-        _clus = Collapse(_clus);
+        if(check){ assert(!check_cluster_internal_overlap(_clus)); }
+        _clus = Collapse(_clus,check);
     }
     _overlap = CheckOverlap(_clus);
     assert(_overlap == make_pair(0,0));
@@ -848,6 +911,7 @@ pair<int,int> Placer::CheckOverlap(Cluster* _clus)
             }
         }
     }
+    if(_x_max != 0){cout<<"Overlap = "<<_x_max<<endl;}
     return overlap; // return (0,0) if no overlap occurs
 }
 

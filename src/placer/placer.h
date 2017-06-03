@@ -43,6 +43,7 @@ public:
     Placer(Circuit &inCir): _cir(&inCir), _modPLPos(0) {
         _modPLPos.resize( 3, vector<Point>( _cir->numModules() ) );
         prev_cells.resize(_cir->numRows());
+        next_cells.resize(_cir->numRows());
         _rowIdClusterMap.resize(_cir->numRows(),0);
         _cellIdClusterMap.resize(_cir->numModules(),0);
         save_modules_2_pos(PL_INIT);
@@ -84,8 +85,10 @@ public:
     /////////////////////////////////////////////
     void print_cell_order() const;
     //void print_fanins_fanouts(Cluster* _clus) const;
-    void print_delat_x(Cluster* _clus) const;
+    void print_delta_x(Cluster* _clus) const;
     void print_last_module_name() const;
+    bool check_cluster_internal_overlap(Cluster* _clus);
+
     void try_area();
     void try_area2();
     
@@ -99,7 +102,7 @@ public:
     void Decluster();
     void RenewPosition(Cluster &c1);
     double RenewCost(Cluster &c1);         //return new cost
-    Cluster* Collapse(Cluster* _clus);
+    Cluster* Collapse(Cluster* _clus, bool check = false);
     pair<int,int> CheckOverlap(Cluster* _clus) ; //return pair of index (_modules[index]) overlapping with other cells 
     void set_x_to_site(Cluster* _clus);
 
@@ -120,6 +123,7 @@ private:
     vector<Cluster*> _rowIdClusterMap;      // store the last cluster in every row
     vector<Cluster*> _cellIdClusterMap;     // use to store cell cluster mapping (index = dbId())
     vector< map<int,int> > prev_cells;      // use this to detect nearby previous cells (this cell id to prev cell id)
+    vector< map<int,int> > next_cells;      // use this to detect nearby previous cells (this cell id to prev cell id)
 
     map<int, Cluster*> _clusters;           // store all clusters
 };
