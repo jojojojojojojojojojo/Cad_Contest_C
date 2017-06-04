@@ -88,6 +88,7 @@ public:
     void print_delta_x(Cluster* _clus) const;
     void print_last_module_name() const;
     bool check_cluster_internal_overlap(Cluster* _clus);
+    bool check_all(int to_index) const;
 
     void try_area();
     void try_area2();
