@@ -20,19 +20,6 @@ class Cluster
     friend class Placer;
 public:
     Cluster():id(global_id), _e(0), _q(0), _cost(0){ global_id++; }
-    Cluster(Cluster* _clus){
-        id = _clus->id;
-        _ref_module = _clus->_ref_module;
-        _x_ref = _clus->_x_ref;
-        _e = _clus->_e;
-        _q = _clus->_q;
-        _delta_x = _clus->_delta_x;
-        _cost = _clus->_cost;
-        _lastNode = _clus->_lastNode;
-        _cellIdModuleMap = _clus->_cellIdModuleMap;
-        _modules = _clus->_modules;
-    }
-    //Cluster operator=(const Cluster& b);
     //int round_x_to_site(double x_in, Row* _row);    //since q/e is usually not on site, this function round x into site
 private:
 
@@ -105,19 +92,18 @@ public:
 
     void try_area();
     void try_area2();
-    double Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum, bool is_trial);
     
     /////////////////////////////////////////////////
     //             Operating Functions             //
     /////////////////////////////////////////////////
 
     //change return type and input variables if neccessary
-    void AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell, bool is_trial);
-    Cluster* AddCluster(Module* _prevCell, Module* _cell, bool is_trial);
+    void AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell);
+    Cluster* AddCluster(Module* _prevCell, Module* _cell);
     void Decluster();
     void RenewPosition(Cluster &c1);
     double RenewCost(Cluster &c1);         //return new cost
-    Cluster* Collapse(Cluster* _clus, vector<Cluster*>& orig, bool check = false);
+    Cluster* Collapse(Cluster* _clus, bool check = false);
     pair<int,int> CheckOverlap(Cluster* _clus) ; //return pair of index (_modules[index]) overlapping with other cells 
     void set_x_to_site(Cluster* _clus);
 
