@@ -20,6 +20,18 @@ class Cluster
     friend class Placer;
 public:
     Cluster():id(global_id), _e(0), _q(0), _cost(0){ global_id++; }
+    Cluster(const Cluster& n){
+        id = n.id;
+        _ref_module = n._ref_module;
+        _x_ref = n._x_ref;
+        _e = n._e;
+        _q = n._q;
+        _delta_x = n._delta_x;
+        _cost = n._cost;
+        _lastNode = n._lastNode;
+        _cellIdModuleMap = n._cellIdModuleMap;
+        _modules = n._modules;
+    }
     //int round_x_to_site(double x_in, Row* _row);    //since q/e is usually not on site, this function round x into site
 private:
 
@@ -106,7 +118,11 @@ public:
     Cluster* Collapse(Cluster* _clus, bool check = false);
     pair<int,int> CheckOverlap(Cluster* _clus) ; //return pair of index (_modules[index]) overlapping with other cells 
     void set_x_to_site(Cluster* _clus);
-
+    double Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum);
+    double Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum);
+    void AddCell_trial(Cluster* _clus, Module* _cell, int _rowNum);
+    Cluster* AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _clus);
+    Cluster* Collapse_trial(Cluster* _clus);
 
     Circuit &cir() {return *_cir;}
 
