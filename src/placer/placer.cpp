@@ -473,94 +473,45 @@ void Placer::try_area()
         Module* _cell = &_cir->module(cell_order[i]);
         int rowHeight = (int)(_cell->height()/_cir->rowHeight());
         int rowNum = _cir->y_2_row_id(_cell->y());
-
-        /*
-        cout<<"\nCell Name = "<<_cell->name()<<";\nX position = "<<_modPLPos[0][cell_order[i]];
-        cout<<"; #Row = "<<rowHeight<<"; width = "<<_cell->width()<<"; rowNum = "<<rowNum<<endl;
-        */
-
+        int cost_best = INT_MAX;
+        int row_best = rowNum;
         //find previous cluster (with max x position) if one exist
-        Cluster* _cluster = 0;
-        int maxX = INT_MIN;
-        for(int j = 0 ; j < rowHeight ; j++ )
-        {
-            if(_rowIdClusterMap[rowNum+j] == 0) continue;
-            Cluster* _lastClus = _rowIdClusterMap[rowNum+j];
-            int index = (_lastClus->_lastNode.find(rowNum+j))->second;
-            int rightmost_x = _lastClus->_x_ref + _lastClus->_delta_x[index] + _lastClus->_modules[index]->_module->width();
-            /*
-            cout<<"_x_ref of cluster = "<<_lastClus->_x_ref<<endl;
-            cout<<"***Cell name = "<<_cell->name()<<"***\n";
-            cout<<"rightmost_x = "<<rightmost_x<<endl;
-            cout<<"_cell->x() = "<<_cell->x()<<endl;
-            cin.get();
-            */
-            if(rightmost_x > maxX ) 
-            {
-                maxX = rightmost_x;
-                if(rightmost_x > (_modPLPos[0][_cell->dbId()].x()))
-                {
-                    _cluster = _lastClus;
-                }
+        for(int counter = 0 ; counter < max(rowNum , (int)(_cir->numRows()-rowNum) ); counter++){
+            if(abs(_cell->y()-_cir->row_id_2_y(rowNum+counter)) > cost_best) break;
+            int cost;
+            // upward
+            cost = Multi_PlaceRow_trial(_cell,rowHeight,rowNum+counter);
+            if(cost < cost_best){
+                cost_best = cost;
+                row_best = rowNum+counter;
             }
-        }
-        if(_cluster == 0) // new cluster
-        {
-            _cluster = new Cluster();
-            _clusters[_cluster->id] = _cluster;
-            AddCell(_cluster, _cell, rowNum, true);
-            //cout<<"New Cluster! _x_ref = "<<_cluster->_x_ref<<endl;
-            //if(i == 3052){ cout<<"module name = "<<_cir->module(cell_order[3052]).name()<<endl;print_last_module_name(); cin.get(); }
-        }
-        else              // add to _cluster
-        {
-            AddCell(_cluster, _cell, rowNum, false);
-            _cluster = Collapse(_cluster);//,i==18363);
-            //if(i==3566)print_delta_x(_cluster);
-        }
-        /*
-        if(i>=3052)
-        {
-            if(_rowIdClusterMap[162]->_modules[_rowIdClusterMap[162]->_lastNode.find(162)->second]->_module->name()!="g53593_u0")
-            {
-                cout<<"i =="<<i<<endl;
-                cout<<"module name = "<<_rowIdClusterMap[162]->_modules[_rowIdClusterMap[162]->_lastNode.find(162)->second]->_module->name()<<endl;
-                cout<<"rowid = "<<_rowIdClusterMap[162]->_modules[_rowIdClusterMap[162]->_lastNode.find(162)->second]->_rowId<<endl;
-                cout<<"height"<<_rowIdClusterMap[162]->_modules[_rowIdClusterMap[162]->_lastNode.find(162)->second]->_degree<<endl;
-                cin.get();
-            }
-        }*/
-        //assert(!check_cluster_internal_overlap(_cluster));
-        //assert(!check_all(i));
+            if(counter == 0) continue;
 
-        /*
-        if(check_all(i))
-        {
-            cout<<"Module <"<<_cir->module(cell_order[i]).name()<<"> orig position = "<<_modPLPos[0][cell_order[i]].x()<<endl;
-            //print_delta_x(_cellIdClusterMap[_cir->module(cell_order[i]).dbId()]);
-            break;
-        }*/
+            // downward
+            cost = Multi_PlaceRow_trial(_cell,rowHeight,rowNum-counter);
+            if(cost < cost_best){
+                cost_best = cost;
+                row_best = rowNum-counter;
+            }
+        }
+        cout<<"Done!"<<endl;
+        Multi_PlaceRow(_cell,rowHeight,row_best);
     }
-    assert(!check_all(_cir->numModules()-1));
+    //assert(!check_all(_cir->numModules()-1));
 
     cout<<"Now renew Position\n";
-
-    /*
+    cout<<"Cluster number = "<<_clusters.size()<<endl;
+    //int counter = 0;
     for(map<int,Cluster*>::iterator iter = _clusters.begin() ; iter != _clusters.end() ; ++iter)
     {
-        print_fanins_fanouts(iter->second);
-    } */
-
-    //print_last_module_name();
-
-    for(map<int,Cluster*>::iterator iter = _clusters.begin() ; iter != _clusters.end() ; ++iter)
-    {
+        //cout<<"counter = "<<counter;
+        //counter++;
         RenewPosition(*(iter->second));
     }
 
     cout<<"Cluster number = "<<_clusters.size()<<endl;
 }
-
+/*
 void Placer::try_area2()
 {
     int index = 20480;
@@ -634,7 +585,7 @@ void Placer::try_area2()
     print_last_module_name();
 
     check_cluster_internal_overlap(ret_clus);
-}
+}*/
 
 /////////////////////////////////////////////////
 //           Functions for Clusters            //
@@ -686,11 +637,6 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
         int delta_x = INT_MIN;
         // find previous node in cluster ( set "all"(not just adjacent ones) previous cells to FIs)->already modified 
 
-        /*
-        vector<double> FI_positions;
-        FI_positions.resize(rowHeight,DBL_MAX);
-        */
-
         // renew prev_cells at the same time
         for(int i = 0; i < rowHeight ; i++)   
         {
@@ -708,6 +654,7 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
                 }
                 //FI_positions[i] = _clus->_delta_x[_iter->second]+_prevNode->_module->width();
             }
+
             Cluster* _prevClus = _rowIdClusterMap[_rowNum+i];  //find previous cluster
             if(_prevClus != 0 )       //if do find a cluster
             {
@@ -717,8 +664,8 @@ void Placer::AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell
                 prev_cells[_rowNum+i][_cell->dbId()] = _prevNode->_module->dbId();
                 next_cells[_rowNum+i][_prevNode->_module->dbId()] = _cell->dbId();
             }
+
         }
-        
         //eliminate non adjacent cells
         /*
         for(int i = 0 ; i < rowHeight ; i++)
@@ -776,31 +723,9 @@ Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell)
     int _prevNodeIndex = _prevClus->_cellIdModuleMap.find(_prevCell->dbId())->second;
     int _nodeIndex = _clus->_cellIdModuleMap.find(_cell->dbId())->second;
 
-    //renew FI FO of nodes
-    /*
-    Node* _prevNode = _prevClus->_modules[_prevNodeIndex];
-    Node* _node =  _clus->_modules[_nodeIndex];
-    bool change = false;
-    for(int i = 0 ; i < _node->_degree ; i++)
-    {
-        map<int,int>::iterator ite = prev_cells[_node->_rowId+i].find(_cell->dbId());
-        if(ite != prev_cells[_node->_rowId+i].end() && ite->second == (int)_prevCell->dbId())
-        {
-            change = true;
-            assert(_node->getFI(i)==0);
-            _node->setFI(i,_prevNode);
-            assert(_prevNode->getFO(i+_node->_rowId-_prevNode->_rowId)==0);
-            _prevNode->setFO(i+_node->_rowId-_prevNode->_rowId, _node);
-        }
-    }
-    //assert(change);
-    */
-
     //assert overlap is true
     assert(_prevClus->_x_ref+_prevClus->_delta_x[_prevNodeIndex]+_prevCell->width() > _clus->_x_ref+_clus->_delta_x[_nodeIndex]);
 
-    //cout<<"prev cell pos = "<<_prevClus->_x_ref+_prevClus->_delta_x[_prevNodeIndex]+_prevCell->width()<<endl;
-    //cout<<"cell pos = "<<_clus->_x_ref+_clus->_delta_x[_nodeIndex]<<endl;
     double ref_dist = _prevClus->_delta_x[_prevNodeIndex]+_prevCell->width()-_clus->_delta_x[_nodeIndex];
 
     if(_prevClus->_modules.size() >= _clus->_modules.size())    //ref cell belongs to prevClus
@@ -920,12 +845,13 @@ void Placer::Decluster()
 
 void Placer::RenewPosition(Cluster &c1) 
 {
-    //cout<<"renew position cluster : "<<c1.id<<endl;
+    cout<<"renew position cluster : "<<c1.id<<endl;
+    
     for(size_t i = 0 ; i < c1._modules.size() ; i++){
         Point pos(c1._x_ref+c1._delta_x[i],_cir->row_id_2_y(c1._modules[i]->_rowId));
-        if(c1._modules[i]->_degree%2)
-            move_module_2_pos(*c1._modules[i]->_module,pos,MOVE_ONSITE);
-        else
+        //if(c1._modules[i]->_degree%2)
+          //  move_module_2_pos(*c1._modules[i]->_module,pos,MOVE_ONSITE);
+        //else
             move_module_2_pos(*c1._modules[i]->_module,pos,MOVE_FREE); // not finished, need to check
     }
 }
@@ -948,7 +874,6 @@ Cluster* Placer::Collapse(Cluster* _clus, bool check)
     pair<int,int> _overlap = CheckOverlap(_clus);
     //cout<<"CheckOverlap done\n";
     if(get<0>(_overlap)!=0 || get<1>(_overlap)!=0){
-        //_overlap = CheckOverlap(_clus);
         _clus = AddCluster(&_cir->module(get<0>(_overlap)),&_cir->module(get<1>(_overlap)));
         if(check){ assert(!check_cluster_internal_overlap(_clus)); }
         _clus = Collapse(_clus,check);
@@ -994,4 +919,210 @@ void Placer::set_x_to_site(Cluster* _clus)
 {
     double x = (_clus->_q/_clus->_e);
     _clus->_x_ref = _cir->g_x_on_site(x, 0, Circuit::ALIGN_HERE);
+}
+
+double Placer::Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum)
+{
+    Cluster* _cluster = 0;
+    int maxX = INT_MIN;
+    for(int j = 0 ; j < rowHeight ; j++ )
+    {
+        if(_rowIdClusterMap[rowNum+j] == 0) continue;
+        Cluster* _lastClus = _rowIdClusterMap[rowNum+j];
+        int index = (_lastClus->_lastNode.find(rowNum+j))->second;
+        int rightmost_x = _lastClus->_x_ref + _lastClus->_delta_x[index] + _lastClus->_modules[index]->_module->width();
+        if(rightmost_x > maxX ) 
+        {
+            maxX = rightmost_x;
+            if(rightmost_x > (_modPLPos[0][_cell->dbId()].x()))
+            {
+                _cluster = _lastClus;
+            }
+        }
+    }
+    if(_cluster == 0) // new cluster
+    {
+        _cluster = new Cluster();
+        _clusters[_cluster->id] = _cluster;
+        AddCell(_cluster, _cell, rowNum, true);
+        _cluster->_cost = RenewCost(*_cluster);
+    }
+    else              // add to _cluster
+    {
+        AddCell(_cluster, _cell, rowNum, false);
+        _cluster = Collapse(_cluster);//,i==18363);
+        _cluster->_cost = RenewCost(*_cluster);
+        
+    }
+    return 0;
+}
+
+double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
+{
+    Cluster* _cluster = 0;
+    int maxX = INT_MIN;
+    for(int j = 0 ; j < rowHeight ; j++ )
+    {
+        if(_rowIdClusterMap[rowNum+j] == 0) continue;
+        Cluster* _lastClus = _rowIdClusterMap[rowNum+j];
+        int index = (_lastClus->_lastNode.find(rowNum+j))->second;
+        int rightmost_x = _lastClus->_x_ref + _lastClus->_delta_x[index] + _lastClus->_modules[index]->_module->width();
+        if(rightmost_x > maxX ) 
+        {
+            maxX = rightmost_x;
+            if(rightmost_x > (_modPLPos[0][_cell->dbId()].x()))
+            {
+                _cluster = _lastClus;
+            }
+        }
+    }
+    if(_cluster == 0) // new cluster
+    {
+        return abs(_cell->y() - _cir->row_id_2_y(rowNum));
+    }
+    else              // add to _cluster
+    {
+        Cluster *temp = new Cluster(*_cluster);
+        AddCell_trial(temp, _cell, rowNum);
+        temp = Collapse_trial(temp);//,i==18363);
+        int cost = RenewCost(*temp) - temp->_cost;
+
+        for(int i=0;i<rowHeight;i++){
+              //if do find a cluster
+            if(prev_cells[rowNum+i].find(_cell->dbId())!=prev_cells[rowNum+i].end())
+            {
+                prev_cells[rowNum+i].erase(_cell->dbId());
+                next_cells[rowNum+i].erase(_cell->dbId());
+            }
+        }
+        delete temp;
+        return cost;
+    }
+}
+
+void Placer::AddCell_trial(Cluster* _clus,Module* _cell, int _rowNum)
+{
+    assert(_cell->isStdCell()); //assert is standard cell (module includes preplaced blocks, I/O pins)
+    int rowHeight = (int)(_cell->height()/_cir->rowHeight());
+    Node* _newNode = new Node(_cell, rowHeight, _rowNum);
+    _clus->_e += _cell->weight();   //numPins()
+
+    //add module to _modules, _cellIdModuleMap
+    _clus->_modules.push_back(_newNode);
+    _clus->_cellIdModuleMap[_cell->dbId()] = _clus->_modules.size()-1;
+
+    map<int, int>::iterator _iter;
+
+    int delta_x = INT_MIN;
+    // find previous node in cluster ( set "all"(not just adjacent ones) previous cells to FIs)->already modified 
+
+    // renew prev_cells at the same time
+    for(int i = 0; i < rowHeight ; i++)   
+    {
+        _iter = _clus->_lastNode.find(_rowNum+i);
+        if(_iter != _clus->_lastNode.end())    //find previous node
+        {
+            Node* _prevNode = _clus->_modules[_iter->second];
+            if(_clus->_delta_x[_iter->second]+_prevNode->_module->width() > delta_x)
+            {
+                delta_x = _clus->_delta_x[_iter->second]+_prevNode->_module->width();
+            }
+        }
+        Cluster* _prevClus = _rowIdClusterMap[_rowNum+i];  //find previous cluster
+        if(_prevClus != 0 )       //if do find a cluster
+        {
+            //assert(_prevClus != _clus);        //cluster will not be _clus (or else will not go in here)
+            int nodeIndex = (_prevClus->_lastNode.find(_rowNum+i))->second;
+            Node* _prevNode = _prevClus->_modules[nodeIndex];
+            prev_cells[_rowNum+i][_cell->dbId()] = _prevNode->_module->dbId();
+            next_cells[_rowNum+i][_prevNode->_module->dbId()] = _cell->dbId();
+        }
+    }
+
+    assert(delta_x != INT_MIN);
+    // renew _clus->_delta_x
+    _clus->_delta_x.push_back(delta_x);
+
+    // renew q
+    _clus->_q += (_cell->weight())*(_modPLPos[0][_cell->dbId()].x()-delta_x);
+
+    // renew _clus->_lastnode and _rowIdClusterMap
+    for(int i = 0; i < rowHeight ; i++)   
+    {
+        // renew _clus->_lastnode
+        _clus->_lastNode[_rowNum+i] = (_clus->_modules.size()-1);
+    }
+    // renew _x_ref
+    set_x_to_site(_clus);
+
+}
+
+Cluster* Placer::Collapse_trial(Cluster* _clus)
+{
+    //cout<<"Collapsing: ";
+    pair<int,int> _overlap = CheckOverlap(_clus);
+    //cout<<"CheckOverlap done\n";
+    if(get<0>(_overlap)!=0 || get<1>(_overlap)!=0){
+        _clus = AddCluster_trial(&_cir->module(get<0>(_overlap)),&_cir->module(get<1>(_overlap)),_clus);
+        _clus = Collapse_trial(_clus);
+    }
+    return _clus;
+}
+
+Cluster* Placer::AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _clus)
+{
+    //cout<<"Add Cluster\n";
+    Cluster* _prevClus = _cellIdClusterMap[_prevCell->dbId()];
+    assert(_prevClus != 0 && _clus != 0 && _prevClus != _clus);
+    int _prevNodeIndex = _prevClus->_cellIdModuleMap.find(_prevCell->dbId())->second;
+    int _nodeIndex = _clus->_cellIdModuleMap.find(_cell->dbId())->second;
+
+    //assert overlap is true
+    assert(_prevClus->_x_ref+_prevClus->_delta_x[_prevNodeIndex]+_prevCell->width() > _clus->_x_ref+_clus->_delta_x[_nodeIndex]);
+
+    double ref_dist = _prevClus->_delta_x[_prevNodeIndex]+_prevCell->width()-_clus->_delta_x[_nodeIndex];
+
+
+    //renew _clus id
+    _clus->id = _prevClus->id;
+    //renew e, q, delta_x, _prevClus->_modules, _cellIdModuleMap
+    _clus->_e += _prevClus->_e;
+    _clus->_q += _prevClus->_q + (_prevClus->_e)*(ref_dist);
+    for(unsigned i = 0 ; i < _prevClus->_modules.size() ; i++)
+    {
+        _clus->_modules.push_back(_prevClus->_modules[i]);
+        _clus->_delta_x.push_back(_prevClus->_delta_x[i]-ref_dist);
+        _clus->_cellIdModuleMap[_prevClus->_modules[i]->_module->dbId()] = _clus->_modules.size()-1;
+    }
+
+    //re-establish _lastNode
+    _clus->_lastNode.clear();
+    vector<pair<int,int> > lastNodeTemp; //first: index in modules, second: delta_x+width
+    lastNodeTemp.resize(_cir->numRows(),make_pair(-1,INT_MIN));
+    for(unsigned i = 0 ; i < _clus->_modules.size() ; i++)
+    {
+        int rowId = _clus->_modules[i]->_rowId;
+        for(int j = rowId ; j < rowId+_clus->_modules[i]->_degree ; j++)
+        {
+            if(lastNodeTemp[j].second < _clus->_delta_x[i]+_clus->_modules[i]->_module->width())
+            {
+                lastNodeTemp[j] = make_pair(i,_clus->_delta_x[i]+_clus->_modules[i]->_module->width()); 
+            }
+        }
+    }
+    for(unsigned i = 0 ; i < _cir->numRows() ; i++)
+    {
+        if(lastNodeTemp[i].second != INT_MIN)   //exist some node
+        {
+            _clus->_lastNode[i] = lastNodeTemp[i].first;
+        }
+    }
+
+    //store _cost of _prevClus
+    _clus->_cost += _prevClus->_cost;
+
+    //re-evaluate position
+    set_x_to_site(_clus);
+
+    return _clus;
 }
