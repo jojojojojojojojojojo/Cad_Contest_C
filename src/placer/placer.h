@@ -32,6 +32,7 @@ public:
         _cellIdModuleMap = n._cellIdModuleMap;
         _modules = n._modules;
     }
+    ~Cluster() {}
     //int round_x_to_site(double x_in, Row* _row);    //since q/e is usually not on site, this function round x into site
 private:
 
@@ -118,11 +119,13 @@ public:
     Cluster* Collapse(Cluster* _clus, bool check = false);
     pair<int,int> CheckOverlap(Cluster* _clus) ; //return pair of index (_modules[index]) overlapping with other cells 
     void set_x_to_site(Cluster* _clus);
+
     double Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum);
     double Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum);
     void AddCell_trial(Cluster* _clus, Module* _cell, int _rowNum);
     Cluster* AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _clus);
     Cluster* Collapse_trial(Cluster* _clus);
+    pair<int,int> CheckOverlap_trial(Cluster* _clus);
 
     Circuit &cir() {return *_cir;}
 
