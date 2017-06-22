@@ -490,7 +490,7 @@ void Placer::try_area()
         double cost_best = DBL_MAX;
         int row_best = rowNum;
 
-        /*
+        
         //find previous cluster (with max x position) if one exist
         //upward
         for(int counter = 0 ; counter <= (int)(_cir->numRows()-rowNum-rowHeight ) ; counter++)
@@ -525,7 +525,7 @@ void Placer::try_area()
                 cost_best = cost;
                 row_best = rowNum-counter;
             }
-        }*/
+        }
         //cout<<"Done!"<<endl;
         
         Multi_PlaceRow(_cell,rowHeight,row_best);

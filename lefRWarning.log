@@ -1,23 +1,23 @@
-Warnings from file: benchmarks/fft_2_md2/tech.lef
+Warnings from file: benchmarks/fft_a_md2/tech.lef
 
 WARNING (LEFPARS-2007): NAMESCASESENSITIVE statement is obsolete in version 5.6 and later.
 The LEF parser will ignore this statement.
-To avoid this warning in the future, remove this statement from the LEF file with version 5.6 or later. See file benchmarks/fft_2_md2/tech.lef at line 4
+To avoid this warning in the future, remove this statement from the LEF file with version 5.6 or later. See file benchmarks/fft_a_md2/tech.lef at line 4
 WARNING (LEFPARS-2019): TOPOFSTACKONLY statement is obsolete in version 5.6 and later.
 The LEF parser will ignore this statement.
-To avoid this warning in the future, remove this statement from the LEF file with version 5.6 or later See file benchmarks/fft_2_md2/tech.lef at line 472
+To avoid this warning in the future, remove this statement from the LEF file with version 5.6 or later See file benchmarks/fft_a_md2/tech.lef at line 472
 WARNING (LEFPARS-2019): TOPOFSTACKONLY statement is obsolete in version 5.6 and later.
 The LEF parser will ignore this statement.
-To avoid this warning in the future, remove this statement from the LEF file with version 5.6 or later See file benchmarks/fft_2_md2/tech.lef at line 482
+To avoid this warning in the future, remove this statement from the LEF file with version 5.6 or later See file benchmarks/fft_a_md2/tech.lef at line 482
 WARNING (LEFPARS-2019): TOPOFSTACKONLY statement is obsolete in version 5.6 and later.
 The LEF parser will ignore this statement.
-To avoid this warning in the future, remove this statement from the LEF file with version 5.6 or later See file benchmarks/fft_2_md2/tech.lef at line 638
+To avoid this warning in the future, remove this statement from the LEF file with version 5.6 or later See file benchmarks/fft_a_md2/tech.lef at line 638
 WARNING (LEFPARS-2019): TOPOFSTACKONLY statement is obsolete in version 5.6 and later.
 The LEF parser will ignore this statement.
-To avoid this warning in the future, remove this statement from the LEF file with version 5.6 or later See file benchmarks/fft_2_md2/tech.lef at line 648
+To avoid this warning in the future, remove this statement from the LEF file with version 5.6 or later See file benchmarks/fft_a_md2/tech.lef at line 648
 WARNING (LEFPARS-2019): TOPOFSTACKONLY statement is obsolete in version 5.6 and later.
 The LEF parser will ignore this statement.
-To avoid this warning in the future, remove this statement from the LEF file with version 5.6 or later See file benchmarks/fft_2_md2/tech.lef at line 804
+To avoid this warning in the future, remove this statement from the LEF file with version 5.6 or later See file benchmarks/fft_a_md2/tech.lef at line 804
 WARNING (LEFPARS-2019): TOPOFSTACKONLY statement is obsolete in version 5.6 and later.
 The LEF parser will ignore this statement.
-To avoid this warning in the future, remove this statement from the LEF file with version 5.6 or later See file benchmarks/fft_2_md2/tech.lef at line 814
+To avoid this warning in the future, remove this statement from the LEF file with version 5.6 or later See file benchmarks/fft_a_md2/tech.lef at line 814
