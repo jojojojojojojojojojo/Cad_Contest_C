@@ -55,10 +55,15 @@ class Placer
 public:
     Placer(Circuit &inCir): _cir(&inCir), _modPLPos(0) {
         _modPLPos.resize( 3, vector<Point>( _cir->numModules() ) );
-        prev_cells.resize(_cir->numRows());
-        next_cells.resize(_cir->numRows());
         _rowIdClusterMap.resize(_cir->numRows(),0);
         _cellIdClusterMap.resize(_cir->numModules(),0);
+        prev_cells.resize(_cir->numRows());
+        next_cells.resize(_cir->numRows());
+        for(unsigned i = 0 ; i < _cir->numRows() ; i++)
+        {
+            prev_cells[i].resize(_cir->numModules(),-1);
+            next_cells[i].resize(_cir->numModules(),-1);
+        }
         save_modules_2_pos(PL_INIT);
         save_modules_2_pos(PL_BEST);
         save_modules_2_pos(PL_LAST);
@@ -114,6 +119,9 @@ public:
     void AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell);
     Cluster* AddCluster(Module* _prevCell, Module* _cell);
     void Decluster();
+
+    bool reduce_DeadSpace(Module* _cell, int _rowNum);
+
     void RenewPosition(Cluster &c1);
     double RenewCost(Cluster &c1);         //return new cost
     Cluster* Collapse(Cluster* _clus, bool check = false);
@@ -124,6 +132,9 @@ public:
     double Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum);
     void AddCell_trial(Cluster* _clus, Module* _cell, int _rowNum);
     Cluster* AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _clus);
+
+    double reduce_DeadSpace_trial(Module* _cell, int _rowNum);
+
     Cluster* Collapse_trial(Cluster* _clus);
     pair<int,int> CheckOverlap_trial(Cluster* _clus);
 
@@ -142,8 +153,10 @@ private:
     vector<int> cell_order;                 // used as legalization order ( _cir->module(cell_order[0]) : first cell )
     vector<Cluster*> _rowIdClusterMap;      // store the last cluster in every row
     vector<Cluster*> _cellIdClusterMap;     // use to store cell cluster mapping (index = dbId())
-    vector< map<int,int> > prev_cells;      // use this to detect nearby previous cells (this cell id to prev cell id)
-    vector< map<int,int> > next_cells;      // use this to detect nearby previous cells (this cell id to prev cell id)
+    //vector< map<int,int> > prev_cells;    // use this to detect nearby previous cells (this cell id to prev cell id)
+    //vector< map<int,int> > next_cells;    // use this to detect nearby previous cells (this cell id to prev cell id)
+    vector< vector<int> > prev_cells;       // try to store it in static array to reduce time
+    vector< vector<int> > next_cells;       // empty if value == -1
 
     map<int, Cluster*> _clusters;           // store all clusters
 };
