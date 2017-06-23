@@ -133,7 +133,7 @@ public:
     void AddCell_trial(Cluster* _clus, Module* _cell, int _rowNum);
     Cluster* AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _clus);
 
-    double reduce_DeadSpace_trial(Module* _cell, int _rowNum);
+    double reduce_DeadSpace_trial(Module* _cell, int _rowNum, double _alpha);
 
     Cluster* Collapse_trial(Cluster* _clus);
     pair<int,int> CheckOverlap_trial(Cluster* _clus);

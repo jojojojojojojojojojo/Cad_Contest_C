@@ -37,7 +37,9 @@ int main( int argc, char ** argv )
     Row::site.showInfo();
     */
     cout<<"Writing plot file\n";
-    circuit.outputGnuplotFigure("orig.plt");
+    //circuit.outputGnuplotFigure("orig.plt");
+    //circuit.print_rows();
+    //cin.get();
 
     placer.place_all_mods_to_site();
     placer.sort_cells();
@@ -46,10 +48,14 @@ int main( int argc, char ** argv )
     placer.try_area();
     //placer.try_area2();
 
+    placer.check_all(circuit.numModules()-1);
+
     cout<<" HPWL = "<<placer.compute_hpwl()<<endl;
 
-    //should be 0
-    cout<<" Displacement = "<<placer.compute_displacement(Placer::PL_INIT)<<endl;
+    //should not be 0
+    double displacement = placer.compute_displacement(Placer::PL_INIT);
+    cout<<" Displacement = "<<displacement<<endl;
+    cout<<" Average Displacement = "<<(displacement/(circuit.rowHeight()*circuit.numModules()))<<endl;
     
     circuit.showInfo();
 
