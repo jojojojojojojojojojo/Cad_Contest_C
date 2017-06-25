@@ -37,8 +37,10 @@ int main( int argc, char ** argv )
     Row::site.showInfo();
     */
     cout<<"Writing plot file\n";
-    //circuit.outputGnuplotFigure("orig.plt");
+    circuit.outputGnuplotFigure("orig.plt");
     //circuit.print_rows();
+    //cin.get();
+    //placer.find_utilization();
     //cin.get();
 
     placer.place_all_mods_to_site();

@@ -57,6 +57,7 @@ SOURCES       = src/common/arghandler.cpp \
 		src/parser/lefrw.cpp \
 		src/parser/parser.cpp \
 		src/placer/placer.cpp \
+		src/placer/placer_2.cpp \
 		src/placer/node.cpp \
 		src/main.cpp 
 OBJECTS       = objects/arghandler.o \
@@ -68,6 +69,7 @@ OBJECTS       = objects/arghandler.o \
 		objects/lefrw.o \
 		objects/parser.o \
 		objects/placer.o \
+		objects/placer_2.o \
 		objects/node.o \
 		objects/main.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
@@ -145,6 +147,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		src/parser/lefrw.cpp \
 		src/parser/parser.cpp \
 		src/placer/placer.cpp \
+		src/placer/placer_2.cpp \
 		src/placer/node.cpp \
 		src/main.cpp
 QMAKE_TARGET  = cad2017
@@ -305,7 +308,7 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents src/common/arghandler.h src/common/paramhandler.h src/common/util.h src/common/GnuplotPlotter.h src/circuit/circuit.h src/circuit/module.h src/circuit/net.h src/circuit/pin.h src/circuit/row.h src/circuit/layer.h src/circuit/fregion.h src/parser/parser.h src/placer/placer.h src/placer/node.h $(DISTDIR)/
-	$(COPY_FILE) --parents src/common/arghandler.cpp src/common/paramhandler.cpp src/common/util.cpp src/common/GnuplotPlotter.cpp src/circuit/circuit.cpp src/parser/defrw.cpp src/parser/lefrw.cpp src/parser/parser.cpp src/placer/placer.cpp src/placer/node.cpp src/main.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents src/common/arghandler.cpp src/common/paramhandler.cpp src/common/util.cpp src/common/GnuplotPlotter.cpp src/circuit/circuit.cpp src/parser/defrw.cpp src/parser/lefrw.cpp src/parser/parser.cpp src/placer/placer.cpp src/placer/placer_2.cpp src/placer/node.cpp src/main.cpp $(DISTDIR)/
 
 
 clean:compiler_clean 
@@ -474,6 +477,22 @@ objects/placer.o: src/placer/placer.cpp src/placer/placer.h \
 		src/parser/parser.h \
 		src/placer/node.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objects/placer.o src/placer/placer.cpp
+
+objects/placer_2.o: src/placer/placer_2.cpp src/placer/placer.h \
+		src/circuit/circuit.h \
+		src/circuit/layer.h \
+		src/common/util.h \
+		src/circuit/module.h \
+		src/circuit/pin.h \
+		src/circuit/row.h \
+		src/circuit/net.h \
+		src/circuit/fregion.h \
+		src/common/paramhandler.h \
+		src/common/arghandler.h \
+		src/common/GnuplotPlotter.h \
+		src/parser/parser.h \
+		src/placer/node.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objects/placer_2.o src/placer/placer_2.cpp
 
 objects/node.o: src/placer/node.cpp src/placer/node.h \
 		src/circuit/module.h \

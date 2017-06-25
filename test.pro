@@ -20,6 +20,7 @@ SOURCES += \ # start from the .pro file
     src/parser/lefrw.cpp \
     src/parser/parser.cpp \
     src/placer/placer.cpp \
+    src/placer/placer_2.cpp \
     src/placer/node.cpp \
     src/main.cpp
 

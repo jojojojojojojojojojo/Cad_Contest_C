@@ -116,9 +116,9 @@ public:
     /////////////////////////////////////////////////
 
     //change return type and input variables if neccessary
-    void AddCell(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell);
+    void AddCell(Cluster* &_clus, Module* _cell, int _rowNum, bool _firstCell);
     Cluster* AddCluster(Module* _prevCell, Module* _cell);
-    void Decluster();
+    Cluster* Decluster(Cluster* _clus, const vector<int>& _ori_delta_x);
 
     bool reduce_DeadSpace(Module* _cell, int _rowNum);
 
@@ -128,8 +128,10 @@ public:
     pair<int,int> CheckOverlap(Cluster* _clus) ; //return pair of index (_modules[index]) overlapping with other cells 
     void set_x_to_site(Cluster* _clus);
 
+    //below functions are in placer_2.cpp
     double Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum);
     double Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum);
+
     void AddCell_trial(Cluster* _clus, Module* _cell, int _rowNum);
     Cluster* AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _clus);
 
@@ -137,6 +139,9 @@ public:
 
     Cluster* Collapse_trial(Cluster* _clus);
     pair<int,int> CheckOverlap_trial(Cluster* _clus);
+
+    bool Is_Cluster_Block_Overlap(Cluster* _clus);
+    double find_utilization();
 
     Circuit &cir() {return *_cir;}
 
