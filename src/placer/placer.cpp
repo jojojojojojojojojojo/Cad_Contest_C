@@ -492,12 +492,12 @@ bool Placer::check_cluster_internal_overlap(Cluster* _clus)
 //this area is made just to try some functionalities of the code
 void Placer::try_area()
 {
-    double _alpha = (find_utilization()>0.8)?0.005:-0.0005; // a function of the "density" of the design (subject to change)
+    double _alpha = (find_utilization()>0.8)?0.005:0.000; // a function of the "density" of the design (subject to change)
     cout<<"Number Of modules = "<<_cir->numModules()<<endl;
     //cin.get();
     for(unsigned i = 0 ; i < _cir->numModules() ; i++)
     {
-        cout<<"Placing Module number : "<<i<<endl;
+        if(i % 1000 == 0){ cout<<"Placing Module number : "<<i<<endl;}
         if(!_cir->module(cell_order[i]).isStdCell()) continue;
 
         Module* _cell = &_cir->module(cell_order[i]);

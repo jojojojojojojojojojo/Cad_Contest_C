@@ -155,7 +155,7 @@ void GnuplotPlotter::outputPlotFile(string filePathName)
     }
 
     // plot rectangle
-    file << "plot '-' with lines" << endl;
+    file << "plot '-' with lines linetype 3" << endl;
     for (unsigned i = 0; i < _rectangles.size(); i++) {
         Rect &rectangle = _rectangles[i];
         file << format("%f %f", rectangle.left(), rectangle.bottom()) << endl;

@@ -413,6 +413,6 @@ double Placer::find_utilization()
             occupied_area += _cir->module(i).width()*_cir->module(i).height();
         }
     }
-    cout<<"Utilization rate = "<<(occupied_area/emtpy_area)<<endl;
+    //cout<<"Utilization rate = "<<(occupied_area/emtpy_area)<<endl;
     return (occupied_area/emtpy_area);
 }

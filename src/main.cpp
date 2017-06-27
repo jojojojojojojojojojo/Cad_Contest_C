@@ -3,6 +3,7 @@
 #include "common/util.h"
 #include "parser/parser.h"
 #include "placer/placer.h"
+#include <ctime>
 
 using namespace std;
 
@@ -38,10 +39,15 @@ int main( int argc, char ** argv )
     */
     cout<<"Writing plot file\n";
     circuit.outputGnuplotFigure("orig.plt");
+    double gp_hpwl = placer.compute_hpwl();
+    double utilize = placer.find_utilization();
     //circuit.print_rows();
     //cin.get();
     //placer.find_utilization();
     //cin.get();
+
+    clock_t start, finish;
+    finish = start = clock();
 
     placer.place_all_mods_to_site();
     placer.sort_cells();
@@ -52,12 +58,20 @@ int main( int argc, char ** argv )
 
     placer.check_all(circuit.numModules()-1);
 
-    cout<<" HPWL = "<<placer.compute_hpwl()<<endl;
 
     //should not be 0
+    finish = clock();
+    cout<<"# of Components = "<<circuit.numComponents()<<endl;
+    cout<<"Total Time in Legalization (second) = "<<(double)(finish-start)/CLOCKS_PER_SEC<<endl;
+
     double displacement = placer.compute_displacement(Placer::PL_INIT);
-    cout<<" Displacement = "<<displacement<<endl;
-    cout<<" Average Displacement = "<<(displacement/(circuit.rowHeight()*circuit.numModules()))<<endl;
+    double lg_hpwl = placer.compute_hpwl();
+    cout<<"Utilization = "<<utilize<<endl;
+    cout<<"GP GPWL = "<<gp_hpwl<<endl;
+    cout<<"LG HPWL = "<<lg_hpwl<<endl;
+    cout<<"Increase in HPWL = "<<((lg_hpwl-gp_hpwl)/gp_hpwl)*100<<"%"<<endl;
+    cout<<"Displacement = "<<displacement<<endl;
+    cout<<"Average Displacement = "<<(displacement/(circuit.rowHeight()*circuit.numModules()))<<endl;
     
     circuit.showInfo();
 
