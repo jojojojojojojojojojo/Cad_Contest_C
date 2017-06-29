@@ -26,7 +26,7 @@ void Parser::parse()
     else
     {
         if( parseDefault() == false ){
-            cout << " ex: ./cad2017 [-iccad17] -tech_lef <.lef> -cell_lef <.lef> -pl_def <.def> -pl_con <.constraints> [-out <out.def>]" << endl;
+            cout << " ex: ./cad2017 [-iccad17] -tech_lef <.lef> -cell_lef <.lef> -pl_def <.def> -pl_con <.constraints> [-out <.def>]" << endl;
             exit( 0 );
         }
     }
@@ -71,8 +71,8 @@ void Parser::parseICCAD17()
         cout << "  util constraint  : " << param.plConstranitFile << endl;
     }else { cerr << "[ERROR] Missing placement_constraints ..." << endl; isFilesNameCorrect = false; }
 
-    if( gArg.checkExist( "output" ) ){
-        gArg.getString( "output", &param.outDefFile );
+    if( gArg.checkExist( "out" ) ){
+        gArg.getString( "out", &param.outDefFile );
         cout << "  output_def       : " << param.outDefFile << endl;
     }
     //else { cerr << "[ERROR] Missing output ..." << endl; isFilesNameCorrect = false; }
