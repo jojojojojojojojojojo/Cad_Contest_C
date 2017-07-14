@@ -40,12 +40,14 @@ double Placer::Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum)
         _clusters[_cluster->id] = _cluster;
         AddCell(_cluster, _cell, rowNum, true);
         _cluster = Collapse(_cluster);//,i==18363);
+        _cluster = Collapse_right(_cluster);
         _cluster->_cost = RenewCost(*_cluster);
     }
     else              // add to _cluster
     {
         AddCell(_cluster, _cell, rowNum, false);
         _cluster = Collapse(_cluster);//,i==18363);
+        _cluster = Collapse_right(_cluster);
         _cluster->_cost = RenewCost(*_cluster);
     }
     /*
@@ -202,12 +204,12 @@ Cluster* Placer::AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _cl
 
     //renew e, q, delta_x, _prevClus->_modules, _cellIdModuleMap
     _clus->_e += _prevClus->_e;
-    _clus->_q += _prevClus->_q + (_prevClus->_e)*(ref_dist);
+    //_clus->_q += _prevClus->_q + (_prevClus->_e)*(ref_dist);
     for(unsigned i = 0 ; i < _prevClus->_modules.size() ; i++)
     {
         _clus->_modules.push_back(_prevClus->_modules[i]);
         _clus->_delta_x.push_back(_prevClus->_delta_x[i]-ref_dist);
-        //_clus->_q += _prevClus->_modules[i]->_module->weight()*(_modPLPos[0][_prevClus->_modules[i]->_module->dbId()].x()-(_prevClus->_delta_x[i]-ref_dist));
+        _clus->_q += _prevClus->_modules[i]->_module->weight()*(_modPLPos[0][_prevClus->_modules[i]->_module->dbId()].x()-(_prevClus->_delta_x[i]-ref_dist));
         _clus->_cellIdModuleMap[_prevClus->_modules[i]->_module->dbId()] = _clus->_modules.size()-1;
     }
     //store _cost of _prevClus
