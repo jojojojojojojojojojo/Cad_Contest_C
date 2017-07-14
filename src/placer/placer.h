@@ -110,6 +110,15 @@ public:
 
     void try_area();
     void try_area2();
+
+    /////////////////////////////////////////////
+    // test funcitons for fregions
+    /////////////////////////////////////////////
+    void fence();
+    void fence_place(Fregion& _fregion);
+    void AddCell_fence(Cluster* &_clus, Module* _cell, int _rowNum, bool _firstCell, Fregion& _fregion);
+    void set_x_to_site_fence(Cluster* _clus, Fregion& _fregion);
+    Cluster* AddCluster_fence(Module* _prevCell, Module* _cell, Fregion& _fregion);
     
     /////////////////////////////////////////////////
     //             Operating Functions             //
@@ -125,7 +134,9 @@ public:
     void RenewPosition(Cluster &c1);
     double RenewCost(Cluster &c1);         //return new cost
     Cluster* Collapse(Cluster* _clus, bool check = false);
+    Cluster* Collapse_right(Cluster* _clus, bool check = false);
     pair<int,int> CheckOverlap(Cluster* _clus) ; //return pair of index (_modules[index]) overlapping with other cells 
+    pair<int,int> CheckOverlap_right(Cluster* _clus);
     void set_x_to_site(Cluster* _clus);
 
     //below functions are in placer_2.cpp
