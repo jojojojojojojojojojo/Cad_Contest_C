@@ -595,7 +595,7 @@ void Placer::try_area()
         //counter++;
         RenewPosition(*(iter->second));
     }
-
+    
     cout<<"Cluster number = "<<_clusters.size()<<endl;
 }
 /*
@@ -821,12 +821,12 @@ Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell)
     {
         //renew e, q, delta_x, _prevClus->_modules, _cellIdModuleMap
         _prevClus->_e += _clus->_e;
-        _prevClus->_q += _clus->_q - (_clus->_e)*(ref_dist);
+        //_prevClus->_q += _clus->_q - (_clus->_e)*(ref_dist);
         for(unsigned i = 0 ; i < _clus->_modules.size() ; i++)
         {
             _prevClus->_modules.push_back(_clus->_modules[i]);
             _prevClus->_delta_x.push_back(_clus->_delta_x[i]+ref_dist);
-            //_prevClus->_q += _clus->_modules[i]->_module->weight()*(_modPLPos[0][_clus->_modules[i]->_module->dbId()].x()-(_clus->_delta_x[i]+ref_dist));
+            _prevClus->_q += _clus->_modules[i]->_module->weight()*(_modPLPos[0][_clus->_modules[i]->_module->dbId()].x()-(_clus->_delta_x[i]+ref_dist));
             _prevClus->_cellIdModuleMap[_clus->_modules[i]->_module->dbId()] = _prevClus->_modules.size()-1;
         }
 
@@ -876,12 +876,12 @@ Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell)
     {
         //renew e, q, delta_x, _prevClus->_modules, _cellIdModuleMap
         _clus->_e += _prevClus->_e;
-        _clus->_q += _prevClus->_q + (_prevClus->_e)*(ref_dist);
+        //_clus->_q += _prevClus->_q + (_prevClus->_e)*(ref_dist);
         for(unsigned i = 0 ; i < _prevClus->_modules.size() ; i++)
         {
             _clus->_modules.push_back(_prevClus->_modules[i]);
             _clus->_delta_x.push_back(_prevClus->_delta_x[i]-ref_dist);
-            //_clus->_q += _prevClus->_modules[i]->_module->weight()*(_modPLPos[0][_prevClus->_modules[i]->_module->dbId()].x()-(_prevClus->_delta_x[i]-ref_dist));
+            _clus->_q += _prevClus->_modules[i]->_module->weight()*(_modPLPos[0][_prevClus->_modules[i]->_module->dbId()].x()-(_prevClus->_delta_x[i]-ref_dist));
             _clus->_cellIdModuleMap[_prevClus->_modules[i]->_module->dbId()] = _clus->_modules.size()-1;
         }
 
@@ -1294,6 +1294,19 @@ Cluster* Placer::Collapse(Cluster* _clus, bool check)
     return _clus;
 }
 
+Cluster* Placer::Collapse_right(Cluster* _clus, bool check)
+{
+    //cout<<"Collapsing: ";
+    pair<int,int> _overlap = CheckOverlap_right(_clus);
+    //cout<<"CheckOverlap done\n";
+    if(get<0>(_overlap)!=0 || get<1>(_overlap)!=0){
+        _clus = AddCluster(&_cir->module(get<0>(_overlap)),&_cir->module(get<1>(_overlap)));
+        if(check){ assert(!check_cluster_internal_overlap(_clus)); }
+        _clus = Collapse_right(_clus,check);
+    }
+    return _clus;
+}
+
 pair<int,int> Placer::CheckOverlap(Cluster* _clus)
 {
     pair<int,int> overlap;
@@ -1322,6 +1335,42 @@ pair<int,int> Placer::CheckOverlap(Cluster* _clus)
                 if(x_ref_next < x_ref && (x_ref-x_ref_next) > _x_max){
                     _x_max = x_ref-x_ref_next;
                     overlap = make_pair(ref_prev,ref);
+                }
+            }
+        }
+    }
+    if(_x_max != 0){/*cout<<"Overlap = "<<_x_max<<endl;*/}
+    return overlap; // return (0,0) if no overlap occurs
+}
+
+pair<int,int> Placer::CheckOverlap_right(Cluster* _clus)
+{
+    pair<int,int> overlap;
+    overlap = make_pair(0,0);
+    int _x_max = 0;
+    //map<int,int>::iterator iter ;
+
+    for(unsigned i = 0 ; i < _clus->_modules.size() ; i++){
+        int ref = _clus->_modules[i]->_module->dbId(); //overlap cell id in _clus
+        int ref_next = -1;                             //overlap cell id in next clus
+        int row = _clus->_modules[i]->_rowId;
+        for(int j = row ; j < row + _clus->_modules[i]->_degree ; j++){
+            //iter = prev_cells[j].find(ref);
+            //if(iter == prev_cells[j].end()) { continue; }
+            //ref_prev = iter->second;    // if this cell is the first cell in the row ? ans: then find will return map::end()
+            if(next_cells[j][ref] == -1) { continue; }
+            ref_next = next_cells[j][ref];
+            if(_cellIdClusterMap[ref_next]->id != _clus->id){
+                int x_ref_next = _cellIdClusterMap[ref_next]->_x_ref;
+                x_ref_next += _cellIdClusterMap[ref_next]->_delta_x[_cellIdClusterMap[ref_next]->_cellIdModuleMap.find(ref_next)->second];
+                
+
+                //int x_ref_next = _clus->_delta_x[_clus->_cellIdModuleMap.find(ref_next)->second] + _clus->_x_ref;
+                int x_ref = _clus->_delta_x[i] + _clus->_x_ref + _cir->module(ref).width();
+
+                if(x_ref_next < x_ref && (x_ref-x_ref_next) > _x_max){
+                    _x_max = x_ref-x_ref_next;
+                    overlap = make_pair(ref,ref_next);
                 }
             }
         }
