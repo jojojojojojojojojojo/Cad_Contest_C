@@ -115,11 +115,7 @@ public:
     /////////////////////////////////////////////
     // test funcitons for fregions
     /////////////////////////////////////////////
-    void fence();
-    void fence_place(Fregion& _fregion);
-    void AddCell_fence(Cluster* &_clus, Module* _cell, int _rowNum, bool _firstCell, Fregion& _fregion);
-    void set_x_to_site_fence(Cluster* _clus, Fregion& _fregion);
-    Cluster* AddCluster_fence(Module* _prevCell, Module* _cell, Fregion& _fregion);
+
     
     /////////////////////////////////////////////////
     //             Operating Functions             //
