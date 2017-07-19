@@ -19,7 +19,7 @@ class Cluster
 {
     friend class Placer;
 public:
-    Cluster():id(global_id), _e(0), _q(0), _cost(0){ global_id++; }
+    Cluster():id(global_id), _e(0), _q(0), _cost(0), dead(false){ global_id++; }
     Cluster(const Cluster& n){
         id = n.id;
         _ref_module = n._ref_module;
@@ -44,6 +44,7 @@ private:
     double _q;                  //cluster q
     vector<int> _delta_x;       //delta position of _modules[i] to ref (same index as in _modules)
     double _cost;               //stored cost
+    bool dead;
 
     map<int,int> _lastNode;     //last node in each row (first: rowId, second: index in _modules)
     map<int,int> _cellIdModuleMap;// mapping between cell id and _modules (first: cellId, second: index in _modules)
@@ -145,11 +146,14 @@ public:
 
     void AddCell_trial(Cluster* _clus, Module* _cell, int _rowNum);
     Cluster* AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _clus);
+    Cluster* AddCluster_trial_right(Module* _prevCell, Module* _cell, Cluster* _clus);
 
     double reduce_DeadSpace_trial(Module* _cell, int _rowNum, double _alpha);
 
     Cluster* Collapse_trial(Cluster* _clus);
+    Cluster* Collapse_trial_right(Cluster* _clus);
     pair<int,int> CheckOverlap_trial(Cluster* _clus);
+    pair<int,int> CheckOverlap_trial_right(Cluster* _clus);
 
     bool Is_Cluster_Block_Overlap(Cluster* _clus);
     double find_utilization();
