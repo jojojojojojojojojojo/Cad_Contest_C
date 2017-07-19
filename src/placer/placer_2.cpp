@@ -100,6 +100,7 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
         //double cost = RenewCost(*_clus);
 
         _clus = Collapse_trial(_clus);
+        _clus = Collapse_trial_right(_clus);
         double cost = RenewCost(*_clus) - _clus->_cost;
 
 
@@ -114,6 +115,7 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
         Cluster *temp = new Cluster(*_cluster);
         AddCell_trial(temp, _cell, rowNum);
         temp = Collapse_trial(temp);//,i==18363);
+        temp = Collapse_trial_right(temp);
         double cost = RenewCost(*temp) - temp->_cost;
 
         if(Is_Cluster_Block_Overlap(temp)){ cost = DBL_MAX; }
@@ -184,6 +186,18 @@ Cluster* Placer::Collapse_trial(Cluster* _clus)
     return _clus;
 }
 
+Cluster* Placer::Collapse_trial_right(Cluster* _clus)
+{
+    //cout<<"Collapse\n";
+    pair<int,int> _overlap = CheckOverlap_trial_right(_clus);
+    //cout<<"CheckOverlap done\n";
+    if(get<0>(_overlap)!=0 || get<1>(_overlap)!=0){
+        _clus = AddCluster_trial_right(&_cir->module(get<0>(_overlap)),&_cir->module(get<1>(_overlap)),_clus);
+        _clus = Collapse_trial_right(_clus);
+    }
+    return _clus;
+}
+
 Cluster* Placer::AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _clus)
 {
     //cout<<"AddCluster\n";
@@ -219,6 +233,45 @@ Cluster* Placer::AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _cl
     set_x_to_site(_clus);
 
     return _clus;
+}
+
+Cluster* Placer::AddCluster_trial_right(Module* _prevCell, Module* _cell, Cluster* _clus)
+{
+    Cluster* _newClus = new Cluster(*(_cellIdClusterMap[_cell->dbId()]));
+
+    //cout<<"AddCluster\n";
+    //Cluster* _prevClus = _cellIdClusterMap[_prevCell->dbId()];
+    //assert(_prevClus != 0 && _clus != 0 && _prevClus != _clus);
+    int _prevNodeIndex = _clus->_cellIdModuleMap.find(_prevCell->dbId())->second;
+    int _nodeIndex = _newClus->_cellIdModuleMap.find(_cell->dbId())->second;
+
+    //assert overlap is true
+    assert(_clus->_x_ref+_clus->_delta_x[_prevNodeIndex]+_prevCell->width() > _newClus->_x_ref+_newClus->_delta_x[_nodeIndex]);
+    
+    double ref_dist = _clus->_delta_x[_prevNodeIndex]+_prevCell->width()-_newClus->_delta_x[_nodeIndex];
+
+
+    //renew _clus id
+    //_clus->id = _prevClus->id;
+    // why should the id be renewed?
+
+    //renew e, q, delta_x, _prevClus->_modules, _cellIdModuleMap
+    _newClus->_e += _clus->_e;
+    //_clus->_q += _prevClus->_q + (_prevClus->_e)*(ref_dist);
+    for(unsigned i = 0 ; i < _clus->_modules.size() ; i++)
+    {
+        _newClus->_modules.push_back(_clus->_modules[i]);
+        _newClus->_delta_x.push_back(_clus->_delta_x[i]-ref_dist);
+        _newClus->_q += _clus->_modules[i]->_module->weight()*(_modPLPos[0][_clus->_modules[i]->_module->dbId()].x()-(_clus->_delta_x[i]-ref_dist));
+        _newClus->_cellIdModuleMap[_clus->_modules[i]->_module->dbId()] = _newClus->_modules.size()-1;
+    }
+    //store _cost of _prevClus
+    _newClus->_cost += _clus->_cost;
+
+    //re-evaluate position
+    set_x_to_site(_newClus);
+    delete _clus;
+    return _newClus;
 }
 
 //try putting a "single" row height cell in the white space of _rowNum
@@ -352,6 +405,45 @@ pair<int,int> Placer::CheckOverlap_trial(Cluster* _clus)
         //cout<<"prev = "<<get<0>(overlap)<<endl;
         //cout<<"ref = "<<get<1>(overlap)<<endl;
         }
+    return overlap; // return (0,0) if no overlap occurs
+}
+
+pair<int,int> Placer::CheckOverlap_trial_right(Cluster* _clus)
+{
+    pair<int,int> overlap;
+    overlap = make_pair(0,0);
+    int _x_max = 0;
+    //map<int,int>::iterator iter ;
+
+    for(unsigned i = 0 ; i < _clus->_modules.size() ; i++){
+        int ref = _clus->_modules[i]->_module->dbId(); //overlap cell id in _clus
+        int ref_next = -1;                             //overlap cell id in next clus
+        int row = _clus->_modules[i]->_rowId;
+        for(int j = row ; j < row + _clus->_modules[i]->_degree ; j++){
+            //iter = prev_cells[j].find(ref);
+            //if(iter == prev_cells[j].end()) { continue; }
+            //ref_prev = iter->second;    // if this cell is the first cell in the row ? ans: then find will return map::end()
+            if(next_cells[j][ref] == -1) { continue; }
+            ref_next = next_cells[j][ref];
+            if(_clus->_cellIdModuleMap.find(ref_next) != _clus->_cellIdModuleMap.end()) continue;
+            //if(_cellIdClusterMap[ref_next]->id != _clus->id){
+            else
+            {
+                int x_ref_next = _cellIdClusterMap[ref_next]->_x_ref;
+                x_ref_next += _cellIdClusterMap[ref_next]->_delta_x[_cellIdClusterMap[ref_next]->_cellIdModuleMap.find(ref_next)->second];
+                
+
+                //int x_ref_next = _clus->_delta_x[_clus->_cellIdModuleMap.find(ref_next)->second] + _clus->_x_ref;
+                int x_ref = _clus->_delta_x[i] + _clus->_x_ref + _cir->module(ref).width();
+
+                if(x_ref_next < x_ref && (x_ref-x_ref_next) > _x_max){
+                    _x_max = x_ref-x_ref_next;
+                    overlap = make_pair(ref,ref_next);
+                }
+            }
+        }
+    }
+    if(_x_max != 0){/*cout<<"Overlap = "<<_x_max<<endl;*/}
     return overlap; // return (0,0) if no overlap occurs
 }
 
