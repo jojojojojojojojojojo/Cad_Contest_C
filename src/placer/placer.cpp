@@ -817,7 +817,7 @@ Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell)
     double ref_dist = _prevClus->_delta_x[_prevNodeIndex]+_prevCell->width()-_clus->_delta_x[_nodeIndex];
     //cout<<"ref_dist = "<<ref_dist<<endl;
 
-    if(_prevClus->_modules.size() >= _clus->_modules.size())    //ref cell belongs to prevClus
+    if(false)    //ref cell belongs to prevClus
     {
         //renew e, q, delta_x, _prevClus->_modules, _cellIdModuleMap
         _prevClus->_e += _clus->_e;
