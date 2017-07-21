@@ -69,16 +69,6 @@ public:
         save_modules_2_pos(PL_BEST);
         save_modules_2_pos(PL_LAST);
     }
-    ~Placer()
-    {
-        for(unsigned i = 0 ; i < _cir->numRows() ; i++)
-        {
-            prev_cells[i].clear();
-            next_cells[i].clear();
-        }
-        prev_cells.clear();
-        next_cells.clear();
-    }
 
     //void place();
 
