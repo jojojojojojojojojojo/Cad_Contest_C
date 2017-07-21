@@ -38,25 +38,27 @@ int main( int argc, char ** argv )
     Row::site.showInfo();
     */
     cout<<"Writing plot file\n";
-    circuit.outputGnuplotFigure("orig.plt");
+    //circuit.outputGnuplotFigure("orig.plt");
+    circuit.outputGnuplotFigureFence("fence.plt");
     double gp_hpwl = placer.compute_hpwl();
     double utilize = placer.find_utilization();
     //circuit.print_rows();
     //cin.get();
     //placer.find_utilization();
-    //cin.get();
+    //cin.get()
 
     clock_t start, finish;
     finish = start = clock();
 
     placer.place_all_mods_to_site();
-    placer.sort_cells();
+    placer.fence();
+    //placer.sort_cells();
 
     //placer.print_cell_order();
-    placer.try_area();
+    //placer.try_area();
     //placer.try_area2();
 
-    placer.check_all(circuit.numModules()-1);
+    //placer.check_all(circuit.numModules()-1);
 
 
     //should not be 0
@@ -76,7 +78,7 @@ int main( int argc, char ** argv )
     circuit.showInfo();
 
     cout<<"Writing plot file\n";
-    circuit.outputGnuplotFigure("result.plt");
+    circuit.outputGnuplotFigureFence("result_fence.plt");
 
     if(param.outDefFile != param.UNKNOWN) { parser.writeDEF( param.defFile , param.outDefFile); }
 	return 0;
