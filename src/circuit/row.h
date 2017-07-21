@@ -95,6 +95,9 @@ public:
         _intervals.clear();
         _intervals.push_back( make_pair( x1, x2 ) );
     }
+    void addInterval( double x1, double x2 ){               //newly add
+        _intervals.push_back( make_pair( x1, x2 ) );
+    }
     void eraseInterval( int id ){
         _intervals.erase( vector<pair<double,double> >::iterator( &(_intervals[id]) ) );
     }

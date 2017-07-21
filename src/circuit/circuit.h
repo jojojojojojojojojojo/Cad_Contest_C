@@ -141,6 +141,7 @@ class Circuit
     void createSNetIndexVec();  //mapping from row index to "vdd" or "vss"
     bool isRowBottomVss(const unsigned& _rowId);
     void outputGnuplotFigure(string filePathName);
+    void outputGnuplotFigureFence(string filePathName);
 
 private:
     /////////////////////////////////////////////
