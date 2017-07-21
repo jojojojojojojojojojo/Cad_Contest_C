@@ -410,6 +410,7 @@ void Placer::print_delta_x(Cluster* _clus) const
     {
         cout<<"Module Name = "<<_clus->_modules[i]->_module->name();
         cout<<"; delta_x = "<<_clus->_delta_x[i];
+        cout<<"; width = "<< _clus->_modules[i]->_module->width();
         cout<<"; rowId = "<<_clus->_modules[i]->_rowId<<"~"<<_clus->_modules[i]->_rowId+_clus->_modules[i]->_degree-1<<endl;
     }
 }
@@ -566,11 +567,11 @@ void Placer::try_area()
                 }
             }
         }
-        /*if(cost_best == DBL_MAX)
+        if(cost_best == DBL_MAX)
         {
             cout<<"QQ\n";
             cin.get();
-        }*/
+        }
         //cout<<"cost_best = "<<cost_best<<endl;
         //cout<<"Place In row = "<<row_best<<endl;
         //cout<<"Place again, cost = "<<Multi_PlaceRow_trial(_cell,rowHeight,row_best)<<endl;
@@ -594,6 +595,11 @@ void Placer::try_area()
         //cout<<"counter = "<<counter;
         //counter++;
         RenewPosition(*(iter->second));
+    }
+    for(map<int,Cluster*>::iterator iter = _clusters.begin() ; iter != _clusters.end() ; ++iter)
+    {
+        //Output Overlap information
+        Is_Cluster_Block_Overlap(iter->second,true);
     }
     
     cout<<"Cluster number = "<<_clusters.size()<<endl;
@@ -801,8 +807,8 @@ void Placer::AddCell(Cluster* &_clus, Module* _cell, int _rowNum, bool _firstCel
 // assert that _prevCell is the cell in _perclus that has the largest x overlap with _clus
 // will check and possibly modify _rowIdClusterMap and _cellIdClusterMap
 // only renew FI and FO of the input cells (will wrong if there are multiple collisions)
-//
-Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell)
+// always add _prevClus to _clus for now
+Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell, bool _clus2prevClus)
 {
     //cout<<"Add Cluster\n";
     Cluster* _prevClus = _cellIdClusterMap[_prevCell->dbId()];
@@ -817,7 +823,7 @@ Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell)
     double ref_dist = _prevClus->_delta_x[_prevNodeIndex]+_prevCell->width()-_clus->_delta_x[_nodeIndex];
     //cout<<"ref_dist = "<<ref_dist<<endl;
 
-    if(false)    //ref cell belongs to prevClus
+    if(_clus2prevClus)    //ref cell belongs to prevClus
     {
         //renew e, q, delta_x, _prevClus->_modules, _cellIdModuleMap
         _prevClus->_e += _clus->_e;
@@ -1127,6 +1133,10 @@ bool Placer::reduce_DeadSpace(Module* _cell, int _rowNum)
     { 
         if(last_cell_left_x >= _cell->width())
         {
+            if(Is_Interval_Block_Overlap(make_pair(last_cell_left_x-_cell->width(),last_cell_left_x), _rowNum))
+            {
+                return false;
+            }
             _clus = new Cluster();
             Node* _newNode = new Node(_cell, 1 , _rowNum);
             _clus->_e += _cell->weight();   //numPins()
@@ -1169,7 +1179,7 @@ bool Placer::reduce_DeadSpace(Module* _cell, int _rowNum)
     while(!find_deadSpace)
     {
         assert(last_cell_left_x >= prev_cell_right_x);
-        if(last_cell_left_x-prev_cell_right_x >= _cell->width())
+        if(last_cell_left_x-prev_cell_right_x >= _cell->width() && !Is_Interval_Block_Overlap(make_pair(last_cell_left_x-_cell->width(),last_cell_left_x), _rowNum))
         {
             find_deadSpace = true;
 
@@ -1206,6 +1216,10 @@ bool Placer::reduce_DeadSpace(Module* _cell, int _rowNum)
             { 
                 if(last_cell_left_x >= _cell->width())
                 {
+                    if(Is_Interval_Block_Overlap(make_pair(last_cell_left_x-_cell->width(),last_cell_left_x), _rowNum))
+                    {
+                        return false;
+                    }
                     _clus = new Cluster();
                     Node* _newNode = new Node(_cell, 1 , _rowNum);
                     _clus->_e += _cell->weight();   //numPins()
@@ -1286,6 +1300,10 @@ Cluster* Placer::Collapse(Cluster* _clus, bool check)
     //cout<<"Collapsing: ";
     pair<int,int> _overlap = CheckOverlap(_clus);
     //cout<<"CheckOverlap done\n";
+    if(_clus->id ==13475 && _overlap != make_pair(0,0))
+    {
+        cout<<"Prev cell and cell = "<<_cir->module(get<0>(_overlap)).name()<<" and "<<_cir->module(get<1>(_overlap)).name()<<endl;
+    }
     if(get<0>(_overlap)!=0 || get<1>(_overlap)!=0){
         _clus = AddCluster(&_cir->module(get<0>(_overlap)),&_cir->module(get<1>(_overlap)));
         if(check){ assert(!check_cluster_internal_overlap(_clus)); }

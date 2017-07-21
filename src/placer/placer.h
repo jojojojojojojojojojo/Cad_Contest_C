@@ -69,6 +69,16 @@ public:
         save_modules_2_pos(PL_BEST);
         save_modules_2_pos(PL_LAST);
     }
+    ~Placer()
+    {
+        for(unsigned i = 0 ; i < _cir->numRows() ; i++)
+        {
+            prev_cells[i].clear();
+            next_cells[i].clear();
+        }
+        prev_cells.clear();
+        next_cells.clear();
+    }
 
     //void place();
 
@@ -123,7 +133,7 @@ public:
 
     //change return type and input variables if neccessary
     void AddCell(Cluster* &_clus, Module* _cell, int _rowNum, bool _firstCell);
-    Cluster* AddCluster(Module* _prevCell, Module* _cell);
+    Cluster* AddCluster(Module* _prevCell, Module* _cell, bool _clus2prevClus = false);
     Cluster* Decluster(Cluster* _clus, const vector<int>& _ori_delta_x);
 
     bool reduce_DeadSpace(Module* _cell, int _rowNum);
@@ -151,7 +161,8 @@ public:
     pair<int,int> CheckOverlap_trial(Cluster* _clus);
     pair<int,int> CheckOverlap_trial_right(Cluster* _clus);
 
-    bool Is_Cluster_Block_Overlap(Cluster* _clus);
+    bool Is_Cluster_Block_Overlap(Cluster* _clus,bool output = false);
+    bool Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum);
     double find_utilization();
 
     Circuit &cir() {return *_cir;}
