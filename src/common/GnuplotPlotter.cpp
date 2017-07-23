@@ -131,6 +131,7 @@ void GnuplotPlotter::outputPdfFile(string filePathName)
 void GnuplotPlotter::outputPlotFile(string filePathName)
 {
     ofstream file(filePathName.c_str());
+    file<<"reset"<<endl;
 
     // put both commands and data in a single file (see gnuplot FAQ)
     file << format("set title \"%s\" ", _title.c_str()) << endl;
@@ -155,6 +156,22 @@ void GnuplotPlotter::outputPlotFile(string filePathName)
     }
 
     // plot rectangle
+    //set object 1 rect from 0,0 to 20000,20000 lw 1 fs empty border lc rgb 1
+    /*
+    file << "plot 0" << endl;
+    file << format("set style rect back lw 1 fs empty border lc rgb \"%s\"","blue")<<endl;
+    for (unsigned i = 0; i < _rectangles.size(); i++) {
+        Rect &rectangle = _rectangles[i];
+        file << format("set object rect from %f,%f to %f,%f ", rectangle.left(), rectangle.bottom(), rectangle.right(), rectangle.top()) << endl;
+        //file << endl;
+    }*/
+    /*
+    file << format("set style rect back lw 1 fs empty border lc rgb \"%s\"","blue")<<endl;
+    for (unsigned i = _rectangles.size()/2; i < _rectangles.size(); i++) {
+        Rect &rectangle = _rectangles[i];
+        file << format("set object rect from %f,%f to %f,%f ", rectangle.left(), rectangle.bottom(), rectangle.right(), rectangle.top()) << endl;
+        //file << endl;
+    }*/
     file << "plot '-' with lines linetype 3" << endl;
     for (unsigned i = 0; i < _rectangles.size(); i++) {
         Rect &rectangle = _rectangles[i];
@@ -166,6 +183,8 @@ void GnuplotPlotter::outputPlotFile(string filePathName)
         file << endl;
     }
     file << "EOF" << endl;
+    
+
 
     // wait
     file << "pause -1 'Press any key'" << endl;

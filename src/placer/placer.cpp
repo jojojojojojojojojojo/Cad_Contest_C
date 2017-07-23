@@ -596,13 +596,13 @@ void Placer::try_area()
         //counter++;
         RenewPosition(*(iter->second));
     }
+    cout<<"Cluster number = "<<_clusters.size()<<endl;
+    cout<<"******Check Preplaced block/IO pins overlap (No overlap if no output)******\n";
     for(map<int,Cluster*>::iterator iter = _clusters.begin() ; iter != _clusters.end() ; ++iter)
     {
         //Output Overlap information
         Is_Cluster_Block_Overlap(iter->second,true);
-    }
-    
-    cout<<"Cluster number = "<<_clusters.size()<<endl;
+    }    
 }
 /*
 void Placer::try_area2()
@@ -1194,9 +1194,9 @@ bool Placer::reduce_DeadSpace(Module* _cell, int _rowNum)
             //add cell in a cluster, set ref_x, delata_x, q, prev_cells, next_cells
             _clus->_ref_module = _newNode;
             _clus->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
-            _clus->_q += (_cell->weight())*(prev_cell_right_x);    //q <- q + e*(x'(i)-delta_x(i))
+            _clus->_q += (_cell->weight())*(last_cell_left_x-_cell->width());    //q <- q + e*(x'(i)-delta_x(i))
             //assert on site
-            assert(prev_cell_right_x == _cir->g_x_on_site(prev_cell_right_x, 0, Circuit::ALIGN_HERE));
+            assert(last_cell_left_x-_cell->width() == _cir->g_x_on_site(last_cell_left_x-_cell->width(), 0, Circuit::ALIGN_HERE));
 
             //renew prev cells and next cells
             prev_cells[_rowNum][_cell->dbId()] = prev_cell_id;
@@ -1300,10 +1300,6 @@ Cluster* Placer::Collapse(Cluster* _clus, bool check)
     //cout<<"Collapsing: ";
     pair<int,int> _overlap = CheckOverlap(_clus);
     //cout<<"CheckOverlap done\n";
-    if(_clus->id ==13475 && _overlap != make_pair(0,0))
-    {
-        cout<<"Prev cell and cell = "<<_cir->module(get<0>(_overlap)).name()<<" and "<<_cir->module(get<1>(_overlap)).name()<<endl;
-    }
     if(get<0>(_overlap)!=0 || get<1>(_overlap)!=0){
         _clus = AddCluster(&_cir->module(get<0>(_overlap)),&_cir->module(get<1>(_overlap)));
         if(check){ assert(!check_cluster_internal_overlap(_clus)); }

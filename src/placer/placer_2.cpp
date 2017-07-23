@@ -45,12 +45,6 @@ double Placer::Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum)
     }
     else              // add to _cluster
     {
-        if(_cell->name()=="g555813")
-        {
-            cout<<"g555813 GP x = "<<_modPLPos[0][_cell->dbId()].x()<<endl;
-            print_delta_x(_cluster);
-            //cin.get();
-        }
         AddCell(_cluster, _cell, rowNum, false);
         _cluster = Collapse(_cluster);//,i==18363);
         _cluster = Collapse_right(_cluster);
@@ -62,11 +56,6 @@ double Placer::Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum)
         cout<<"overlap\n";
         cin.get();
     }*/
-    if(_cell->name()=="g555813")
-    {
-        print_delta_x(_cluster);
-        //cin.get();
-    }
     return 0;
 }
 
@@ -144,13 +133,6 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
     else              // add to _cluster
     {
         //cout<<"Collapsed\n";
-        if(_cell->name()=="g555813")
-        {
-            cout<<"g555813 GP x = "<<_modPLPos[0][_cell->dbId()].x()<<endl;
-            print_delta_x(_cluster);
-            print_delta_x(_rowIdClusterMap[42]);
-            //cin.get();
-        }
         Cluster *temp = new Cluster(*_cluster);
         AddCell_trial(temp, _cell, rowNum);
         temp = Collapse_trial(temp);//,i==18363);
@@ -158,12 +140,6 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
         double cost = RenewCost(*temp) - temp->_cost;
 
         if(Is_Cluster_Block_Overlap(temp)){ cost = DBL_MAX; }
-        if(_cell->name()=="g555813")
-        {
-            print_delta_x(temp);
-            cout<<"Cost = "<<cost<<endl;
-            //cin.get();
-        }
         for(int i = 0; i < rowHeight ; i++)   
         {
             int prevCellId = prev_cells[rowNum+i][_cell->dbId()];
@@ -236,10 +212,6 @@ Cluster* Placer::Collapse_trial(Cluster* _clus)
     //cout<<"Collapse\n";
     pair<int,int> _overlap = CheckOverlap_trial(_clus);
     //cout<<"CheckOverlap done\n";
-    if(_clus->id ==13475 && _overlap != make_pair(0,0))
-    {
-        cout<<"Prev cell and cell = "<<_cir->module(get<0>(_overlap)).name()<<" and "<<_cir->module(get<1>(_overlap)).name()<<endl;
-    }
     if(get<0>(_overlap)!=0 || get<1>(_overlap)!=0){
         _clus = AddCluster_trial(&_cir->module(get<0>(_overlap)),&_cir->module(get<1>(_overlap)),_clus);
         _clus = Collapse_trial(_clus);
@@ -525,55 +497,38 @@ pair<int,int> Placer::CheckOverlap_trial_right(Cluster* _clus)
 bool Placer::Is_Cluster_Block_Overlap(Cluster* _clus, bool output)
 {
     //record lowest and highest x position of the cluster in every row 
-    vector< pair<int,int> > clus_interval;
-    clus_interval.resize(_cir->numRows(), make_pair(INT_MAX,INT_MIN));
+    vector< vector<pair<int,int> > > clus_interval;
+    clus_interval.resize(_cir->numRows());
 
     for(unsigned i = 0 ; i < _clus->_modules.size() ; i++)
     {
         Node* _node = _clus->_modules[i];
         for(int j = 0 ; j < _node->_degree ; j++)
         {
-            if(_clus->_x_ref+_clus->_delta_x[i]+_node->_module->width() > clus_interval[_node->_rowId+j].second)
-            {
-                clus_interval[_node->_rowId+j].second = _clus->_x_ref+_clus->_delta_x[i]+_node->_module->width();
-            }
-            if(_clus->_x_ref+_clus->_delta_x[i] < clus_interval[_node->_rowId+j].first)
-            {
-                clus_interval[_node->_rowId+j].first  = _clus->_x_ref+_clus->_delta_x[i];
-            }
+            clus_interval[_node->_rowId+j].push_back(make_pair(_clus->_x_ref+_clus->_delta_x[i],_clus->_x_ref+_clus->_delta_x[i]+_node->_module->width()));
         }
     }
 
     for(unsigned i = 0 ; i< _cir->numRows() ; i++)
     {
-        if(clus_interval[i].first == INT_MAX && clus_interval[i].second == INT_MIN) { continue; }
+        //if(clus_interval[i][0].first == INT_MAX && clus_interval[i][0].second == INT_MIN) { continue; }
         //check if cluster interval in row interval
-        
-        for(unsigned j = 0 ; j < _cir->row(i).numInterval() ; j++)
+        for(unsigned k = 0 ; k < clus_interval[i].size() ; k++)
         {
-            //inside row interval -> good, no overlap wth preplaced block
-            if(clus_interval[i].first >= (int)_cir->row(i).interval(j).first && clus_interval[i].second <= (int)_cir->row(i).interval(j).second )
-            {
-                break;
-            }
-            else if(clus_interval[i].first < (int)_cir->row(i).interval(j).first || j == _cir->row(i).numInterval()-1 )
-            {
-                //if(clus_interval[i].second == 69400){ cout<<"69400true\n";cin.get(); }
+            if(Is_Interval_Block_Overlap(clus_interval[i][k],i,output)) 
+            { 
                 if(output)
                 {
                     print_delta_x(_clus);
-                    cout<<"Row y = "<<_cir->row(i).y()<<endl;
-                    cout<<"clus_interval[i].first = "<<clus_interval[i].first<<endl;
-                    cout<<"clus_interval[i].second = "<<clus_interval[i].second<<endl;
                 }
-                return true;
+                return true; 
             }
         }
     }
     return false;
 }
 
-bool Placer::Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum)
+bool Placer::Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum, bool output)
 {
     for(unsigned j = 0 ; j < _cir->row(_rowNum).numInterval() ; j++)
     {
@@ -584,6 +539,12 @@ bool Placer::Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum)
         }
         else if(_interval.first < (int)_cir->row(_rowNum).interval(j).first || j == _cir->row(_rowNum).numInterval()-1 )
         {
+            if(output)
+            {
+                cout<<"Row y = "<<_rowNum<<endl;
+                cout<<"clus_interval[i].first = "<<_interval.first<<endl;
+                cout<<"clus_interval[i].second = "<<_interval.second<<endl;
+            }
             return true;
         }
     }

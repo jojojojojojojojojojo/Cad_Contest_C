@@ -161,7 +161,7 @@ public:
     pair<int,int> CheckOverlap_trial_right(Cluster* _clus);
 
     bool Is_Cluster_Block_Overlap(Cluster* _clus,bool output = false);
-    bool Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum);
+    bool Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum,bool output = false);
     double find_utilization();
 
     Circuit &cir() {return *_cir;}

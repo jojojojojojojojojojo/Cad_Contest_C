@@ -398,19 +398,17 @@ void Circuit::outputGnuplotFigureFence(string filePathName)
     GnuplotPlotter plotter;
 
     plotter.setTitle("placement figure");
-    for(unsigned j = 0; j < 1; j++) {
-        _fregions[j].showInfo();
-
+    for(unsigned j = 0; j < numFregions(); j++) {
+        //_fregions[j].showInfo();
         for (unsigned i = 0; i < _fregions[j].numRects(); i++) {
             plotter.addRectangle(_fregions[j].rect(i));
         }
-
-        // add rectangles of moudles
         for (unsigned i = 0; i < _fregions[j].numModues(); i++) {
             Module &module = _fregions[j].mod(i);
             plotter.addRectangle(Rect(module.x(),module.y(),module.x()+module.width(),module.y()+module.height()));
         }
     }
+    
     // add rectangle of placement core reigon
     plotter.addRectangle(_rectangleChip);
 
