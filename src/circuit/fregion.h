@@ -18,17 +18,18 @@ using namespace util;
 class Fregion
 {
   public:
-    Fregion(): _name(""), _rects(0), _modules(0) {}
+    Fregion(): _id(global_id), _name(""), _rects(0), _modules(0) { global_id++; }
 
 
     /////////////////////////////////////////////
     // get
     /////////////////////////////////////////////
+    unsigned id() {return _id;}
     string name() {return _name;}
     Rect rect(unsigned i) {return _rects[i];}
     Module &mod(unsigned i) {return *_modules[i];}
     unsigned numRects() {return _rects.size();}
-    unsigned numModues() {return _modules.size();}
+    unsigned numModules() {return _modules.size();}
 
     /////////////////////////////////////////////
     // set
@@ -60,10 +61,14 @@ class Fregion
     }
 
   private:
+    unsigned _id;
+    static unsigned global_id;  //use to assign id 
     string _name;
     vector<Rect> _rects;
     vector<Module*> _modules;
     vector<string> _prefixes;
 };
+
+//unsigned Fregion::global_id = 0;
 
 #endif

@@ -7,6 +7,8 @@
 
 using namespace std;
 
+unsigned Fregion::global_id = 0;
+
 int main( int argc, char ** argv )
 {
 	gArg.init( argc, argv );
@@ -19,6 +21,7 @@ int main( int argc, char ** argv )
 
     Placer placer( circuit );
     placer.save_modules_2_pos(Placer::PL_INIT);
+    circuit.setCellRegion();
 
     //circuit.print_layers();
     //circuit.print_rows();
@@ -37,9 +40,15 @@ int main( int argc, char ** argv )
     cout<<"Module Height = "<<circuit.module(0).height()<<endl;
     Row::site.showInfo();
     */
+
     cout<<"Writing plot file\n";
     circuit.outputGnuplotFigure("orig.plt");
-    //circuit.outputGnuplotFigureFence("fence.plt");
+    circuit.outputGnuplotFigureFence("orig_fence.plt");
+    
+
+    //circuit.print_modRegions();
+    //cin.get();
+
     double gp_hpwl = placer.compute_hpwl();
     double utilize = placer.find_utilization();
     //circuit.print_rows();
@@ -58,6 +67,10 @@ int main( int argc, char ** argv )
     placer.try_area();
     //placer.try_area2();
 
+    if(circuit.check_all_std_cells_on_row_site())
+    {
+    	cout<<"*********All Cells On Site***********\n";
+    }
     placer.check_all(circuit.numModules()-1);
 
 
@@ -79,6 +92,7 @@ int main( int argc, char ** argv )
 
     cout<<"Writing plot file\n";
     circuit.outputGnuplotFigure("result.plt");
+    circuit.outputGnuplotFigureFence("result_fence.plt");
     //circuit.outputGnuplotFigureFence("result_fence.plt");
 
     if(param.outDefFile != param.UNKNOWN) { parser.writeDEF( param.defFile , param.outDefFile); }

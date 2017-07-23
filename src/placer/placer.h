@@ -115,6 +115,7 @@ public:
     /////////////////////////////////////////////
     // test funcitons for fregions
     /////////////////////////////////////////////
+    /*
     bool Is_Cluster_Block_Overlap_fence(Cluster* _clus);
     double Multi_PlaceRow_trial_fence(Module* _cell, int rowHeight, int rowNum);
     void fence_place(Fregion& _fregion);
@@ -125,7 +126,7 @@ public:
     int rightbound(int x, int rowNum);
     double reduce_DeadSpace_trial_fence(Module* _cell, int _rowNum, double _alpha);
     void set_x_to_site_fence(Cluster* _clus);
-    
+    */
     /////////////////////////////////////////////////
     //             Operating Functions             //
     /////////////////////////////////////////////////
@@ -160,8 +161,8 @@ public:
     pair<int,int> CheckOverlap_trial(Cluster* _clus);
     pair<int,int> CheckOverlap_trial_right(Cluster* _clus);
 
-    bool Is_Cluster_Block_Overlap(Cluster* _clus,bool output = false);
-    bool Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum,bool output = false);
+    bool Is_Cluster_Block_Overlap(Cluster* _clus,bool output = false) const;
+    bool Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum,bool output = false) const;
     double find_utilization();
 
     Circuit &cir() {return *_cir;}
@@ -184,8 +185,7 @@ private:
     vector< vector<int> > prev_cells;       // try to store it in static array to reduce time
     vector< vector<int> > next_cells;       // empty if value == -1
 
-    vector<Row> _row;                       // for fregions
-    
+    //vector<Row> _row;                       // for fregions
 
     map<int, Cluster*> _clusters;           // store all clusters
 };

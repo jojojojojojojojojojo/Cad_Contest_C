@@ -494,7 +494,7 @@ pair<int,int> Placer::CheckOverlap_trial_right(Cluster* _clus)
 }
 
 //return true if _clus overlap with preplaced block / IO pins
-bool Placer::Is_Cluster_Block_Overlap(Cluster* _clus, bool output)
+bool Placer::Is_Cluster_Block_Overlap(Cluster* _clus, bool output) const
 {
     //record lowest and highest x position of the cluster in every row 
     vector< vector<pair<int,int> > > clus_interval;
@@ -528,7 +528,7 @@ bool Placer::Is_Cluster_Block_Overlap(Cluster* _clus, bool output)
     return false;
 }
 
-bool Placer::Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum, bool output)
+bool Placer::Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum, bool output) const
 {
     for(unsigned j = 0 ; j < _cir->row(_rowNum).numInterval() ; j++)
     {

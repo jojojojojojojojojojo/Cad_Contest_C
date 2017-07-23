@@ -343,6 +343,19 @@ void Circuit::showInfo()
 //                Newly Added Functions (ICCAD'17)           //
 ///////////////////////////////////////////////////////////////
 
+void Circuit::setCellRegion()
+{
+    _cellIdRegionMap.clear();
+    _cellIdRegionMap.resize(numModules(),0);
+    for(unsigned i = 0 ; i < numFregions() ; i++)
+    {
+        for(unsigned j = 0 ; j < fregion(i).numModules() ; j++)
+        {
+            _cellIdRegionMap[fregion(i).mod(j).dbId()] = &fregion(i);
+        }
+    }
+}
+
 void Circuit::createSNetIndexVec()
 {
     _SNetIndexVec.clear();
@@ -396,21 +409,23 @@ void Circuit::outputGnuplotFigure(string filePathName)
 void Circuit::outputGnuplotFigureFence(string filePathName)
 {
     GnuplotPlotter plotter;
+    plotter.setNumOfFence(numFregions());
 
     plotter.setTitle("placement figure");
-    for(unsigned j = 0; j < numFregions(); j++) {
-        //_fregions[j].showInfo();
-        for (unsigned i = 0; i < _fregions[j].numRects(); i++) {
-            plotter.addRectangle(_fregions[j].rect(i));
-        }
-        for (unsigned i = 0; i < _fregions[j].numModues(); i++) {
-            Module &module = _fregions[j].mod(i);
-            plotter.addRectangle(Rect(module.x(),module.y(),module.x()+module.width(),module.y()+module.height()));
-        }
+    for (unsigned i = 0; i < _modules.size(); i++) {
+        Module &module = _modules[i];
+        int fenceRegionId = (_cellIdRegionMap[module.dbId()] == 0)?-1:_cellIdRegionMap[module.dbId()]->id();
+        plotter.addRectangleRegion(Rect(module.x(),module.y(),module.x()+module.width(),module.y()+module.height()),fenceRegionId);
     }
     
     // add rectangle of placement core reigon
-    plotter.addRectangle(_rectangleChip);
-
-    plotter.outputPlotFile(filePathName);
+    plotter.addRectangleRegion(_rectangleChip,-1);
+    for(unsigned i = 0 ; i < numFregions() ; i++)
+    {
+        for(unsigned j = 0 ; j < fregion(i).numRects() ; j++)
+        {
+            plotter.addRectangleRegion(fregion(i).rect(j),fregion(i).id());
+        }
+    }
+    plotter.outputPlotFileFence(filePathName);
 }

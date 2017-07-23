@@ -134,10 +134,16 @@ class Circuit
     inline void print_nets();
     inline void print_modules();
     inline void print_fregions();
+    inline void print_modRegions();
 
     ///////////////////////////////////////////////////////////////
     //                Newly Added Functions (ICCAD'17)           //
     ///////////////////////////////////////////////////////////////
+
+    Fregion* cellRegion(unsigned cellId) { return _cellIdRegionMap[cellId]; }
+
+    void setCellRegion();       //set _cellIdRegionMap here
+
     void createSNetIndexVec();  //mapping from row index to "vdd" or "vss"
     bool isRowBottomVss(const unsigned& _rowId);
     void outputGnuplotFigure(string filePathName);
@@ -177,6 +183,12 @@ private:
     vector<Module*> _DFFs;
     vector<Module*> _POs;
     vector<Module*> _PIs;
+
+    ///////////////////////////////////////////////////////////////
+    //                Newly Added Members (ICCAD'17)             //
+    ///////////////////////////////////////////////////////////////
+
+    vector<Fregion*> _cellIdRegionMap;  // cell Id to fence region ptr ; == 0 if no fence region for the cell
 };
 
 void Circuit::print_fregions()
@@ -233,6 +245,23 @@ void Circuit::print_masters()
     {
         _masters[i].showInfo(); 
         _masters[i].showPins();
+    }
+}
+
+void Circuit::print_modRegions()
+{
+    cout<<"Print Modules' Fence Regions...\n";
+    for(unsigned i = 0 ; i < numModules() ; i++)
+    {
+        cout<<"Module id #"<< module(i).dbId()<<" fence region : ";
+        if(_cellIdRegionMap[module(i).dbId()] == 0)
+        {
+            cout<<"none"<<endl;
+        }
+        else
+        {
+            cout<<_cellIdRegionMap[module(i).dbId()]->name()<<endl;
+        }
     }
 }
 

@@ -33,15 +33,26 @@ public:
     void outputPdfFile(string filePathName);
     void outputPngFile(string filePathName);
 
+    void outputPlotFileFence(string filePathName);
+
     /////////////////////////////////////////////
     // add/clear objects
     /////////////////////////////////////////////
+
+    //index == -1 if no fence region
+    void setNumOfFence(const unsigned& numFence) { numOfFence = numFence; }
+    void addRectangleRegion(const Rect &rectangle, const int &regionIndex); 
     void addRectangle(const Rect &rectangle);
     void clearObjects();
 
 private:
     // rectangle
     vector<Rect> _rectangles;
+    // rect and fence region
+    vector<pair<Rect,int> > _rectNRegions;
+    unsigned numOfFence;
+
+    vector<string> _colorStrs;      //newly add for fence region color
 
     // properties
     string _title;

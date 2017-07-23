@@ -395,7 +395,13 @@ bool Placer::check_all(int to_index) const
                 numOfOverlap++;
             }
         }
-    }
+    }    
+    cout<<"******Check Preplaced block/IO pins overlap (No overlap if no output)******\n";
+    for(map<int,Cluster*>::const_iterator iter = _clusters.begin() ; iter != _clusters.end() ; ++iter)
+    {
+        //Output Overlap information
+        Is_Cluster_Block_Overlap(iter->second,true);
+    }    
     cout<<"*************CHECK REPORT****************"<<endl;
     cout<<"number of overlaps = "<<numOfOverlap<<endl;
     cout<<"number of out of boundary = "<<numOfOutOfBound<<endl;
@@ -597,12 +603,6 @@ void Placer::try_area()
         RenewPosition(*(iter->second));
     }
     cout<<"Cluster number = "<<_clusters.size()<<endl;
-    cout<<"******Check Preplaced block/IO pins overlap (No overlap if no output)******\n";
-    for(map<int,Cluster*>::iterator iter = _clusters.begin() ; iter != _clusters.end() ; ++iter)
-    {
-        //Output Overlap information
-        Is_Cluster_Block_Overlap(iter->second,true);
-    }    
 }
 /*
 void Placer::try_area2()
