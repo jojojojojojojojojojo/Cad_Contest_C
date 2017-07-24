@@ -53,6 +53,7 @@ class Fregion
 
     void showInfo(){
         cout << "|============ FREGION |" << endl;
+        cout << " Id                   : " << _id << endl;
         cout << " name                 : " << _name << endl;
         cout << " numRects             : " << _rects.size() << endl;
         cout << " numModules           : " << _modules.size() << endl;

@@ -128,12 +128,12 @@ class Circuit
     bool check_all_std_cells_on_row_site();
     
     void showInfo();
+    inline void print_fregions();
     inline void print_masters();  
     inline void print_rows(); 
     inline void print_layers();
     inline void print_nets();
     inline void print_modules();
-    inline void print_fregions();
     inline void print_modRegions();
 
     ///////////////////////////////////////////////////////////////
@@ -143,6 +143,7 @@ class Circuit
     Fregion* cellRegion(unsigned cellId) { return _cellIdRegionMap[cellId]; }
 
     void setCellRegion();       //set _cellIdRegionMap here
+    void remove_sites_fence_region_all() { remove_sites_fence_region(_rows); }
 
     void createSNetIndexVec();  //mapping from row index to "vdd" or "vss"
     bool isRowBottomVss(const unsigned& _rowId);

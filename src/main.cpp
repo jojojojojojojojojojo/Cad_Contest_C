@@ -23,12 +23,17 @@ int main( int argc, char ** argv )
     placer.save_modules_2_pos(Placer::PL_INIT);
     circuit.setCellRegion();
 
+    placer.set_intervals(-1);
+    //placer.print_intervals();
+
     //circuit.print_layers();
     //circuit.print_rows();
+    
     //circuit.print_nets();
     //circuit.print_modules();
     //circuit.print_masters();
     //circuit.print_fregions();
+    //cin.get();
     /*
     for(unsigned i = 0 ; i < circuit.numRows() ; i++)
     {
@@ -42,7 +47,7 @@ int main( int argc, char ** argv )
     */
 
     cout<<"Writing plot file\n";
-    circuit.outputGnuplotFigure("orig.plt");
+    //circuit.outputGnuplotFigure("orig.plt");
     circuit.outputGnuplotFigureFence("orig_fence.plt");
     
 
@@ -91,7 +96,7 @@ int main( int argc, char ** argv )
     circuit.showInfo();
 
     cout<<"Writing plot file\n";
-    circuit.outputGnuplotFigure("result.plt");
+    //circuit.outputGnuplotFigure("result.plt");
     circuit.outputGnuplotFigureFence("result_fence.plt");
     //circuit.outputGnuplotFigureFence("result_fence.plt");
 

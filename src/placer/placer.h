@@ -107,28 +107,13 @@ public:
     //void print_fanins_fanouts(Cluster* _clus) const;
     void print_delta_x(Cluster* _clus) const;
     void print_last_module_name() const;
+    void print_intervals() const;
     bool check_cluster_internal_overlap(Cluster* _clus);
     bool check_all(int to_index) const;
 
     void try_area();
-    void try_area2();
+    //void try_area2();
 
-    /////////////////////////////////////////////
-    // test funcitons for fregions
-    /////////////////////////////////////////////
-    /*
-    bool Is_Cluster_Block_Overlap_fence(Cluster* _clus);
-    double Multi_PlaceRow_trial_fence(Module* _cell, int rowHeight, int rowNum);
-    void fence_place(Fregion& _fregion);
-    void set_intervals_for_fregion(Fregion& _fregion, double& top, double& bot);
-    void fence(){}
-    void sort_cells_fence(Fregion& _fregion);
-    int leftbound(int x, int rowNum);
-    int rightbound(int x, int rowNum);
-    double reduce_DeadSpace_trial_fence(Module* _cell, int _rowNum, double _alpha);
-    void set_x_to_site_fence(Cluster* _clus);
-    */
-    void set_intervals(int _id);
     /////////////////////////////////////////////////
     //             Operating Functions             //
     /////////////////////////////////////////////////
@@ -152,7 +137,7 @@ public:
     double Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum);
     double Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum);
 
-    void AddCell_trial(Cluster* _clus, Module* _cell, int _rowNum);
+    bool AddCell_trial(Cluster* _clus, Module* _cell, int _rowNum); //return false if unable to place
     Cluster* AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _clus);
     Cluster* AddCluster_trial_right(Module* _prevCell, Module* _cell, Cluster* _clus);
 
@@ -166,6 +151,25 @@ public:
     bool Is_Cluster_Block_Overlap(Cluster* _clus,bool output = false) const;
     bool Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum,bool output = false) const;
     double find_utilization();
+
+    /////////////////////////////////////////////
+    // test funcitons for fregions
+    /////////////////////////////////////////////
+    /*
+    bool Is_Cluster_Block_Overlap_fence(Cluster* _clus);
+    double Multi_PlaceRow_trial_fence(Module* _cell, int rowHeight, int rowNum);
+    void fence_place(Fregion& _fregion);
+    void set_intervals_for_fregion(Fregion& _fregion, double& top, double& bot);
+    void fence(){}
+    void sort_cells_fence(Fregion& _fregion);
+    int leftbound(int x, int rowNum);
+    int rightbound(int x, int rowNum);
+    double reduce_DeadSpace_trial_fence(Module* _cell, int _rowNum, double _alpha);
+    void set_x_to_site_fence(Cluster* _clus);
+    */
+    void set_intervals(int _id);
+    double get_valid_pos(Module* _module, int _rowId);
+
 
     Circuit &cir() {return *_cir;}
 
@@ -187,7 +191,7 @@ private:
     vector< vector<int> > prev_cells;       // try to store it in static array to reduce time
     vector< vector<int> > next_cells;       // empty if value == -1
 
-    vector< vector< pair<int,int> > > _Intervals;                       // for fregions
+    vector< vector< pair<int,int> > > _intervals;   // for fregions (first index : rows ; second index : intervals)
 
     map<int, Cluster*> _clusters;           // store all clusters
 };

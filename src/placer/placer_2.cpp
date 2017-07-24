@@ -3,6 +3,12 @@
 #include <climits>
 #include <algorithm>
 
+//used in sorting intervals
+bool pair_compare(pair<int,int>& _p1, pair<int,int>& _p2)
+{
+    return (_p1.second<_p2.second);
+}
+
 double Placer::Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum)
 {
     /*
@@ -90,12 +96,14 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
         //cout<<"new cluster\n";
         Cluster *_clus = new Cluster();
         Node* _newNode = new Node(_cell, rowHeight, rowNum);
+        _newNode->set_x_pos(get_valid_pos(_cell,rowNum));    
+        if(_newNode->_x_pos == DBL_MAX) { return DBL_MAX; }
         _clus->_e += _cell->weight();
         _clus->_modules.push_back(_newNode);
         _clus->_cellIdModuleMap[_cell->dbId()] = _clus->_modules.size()-1;
         _clus->_ref_module = _newNode;
         _clus->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
-        _clus->_q += (_cell->weight())*(_modPLPos[0][_cell->dbId()].x());    //q <- q + e*(x'(i)-delta_x(i))
+        _clus->_q += (_cell->weight())*(_newNode->_x_pos);    //q <- q + e*(x'(i)-delta_x(i))
         for(int i = 0; i < rowHeight ; i++)   
         {
             Cluster* _prevClus = _rowIdClusterMap[rowNum+i];  //find previous cluster
@@ -134,7 +142,7 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
     {
         //cout<<"Collapsed\n";
         Cluster *temp = new Cluster(*_cluster);
-        AddCell_trial(temp, _cell, rowNum);
+        if(!AddCell_trial(temp, _cell, rowNum)) { return DBL_MAX; }
         temp = Collapse_trial(temp);//,i==18363);
         temp = Collapse_trial_right(temp);
         double cost = RenewCost(*temp) - temp->_cost;
@@ -154,13 +162,18 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
     }
 }
 
-void Placer::AddCell_trial(Cluster* _clus,Module* _cell, int _rowNum)
+bool Placer::AddCell_trial(Cluster* _clus,Module* _cell, int _rowNum)
 {
     //cout<<"AddCell\n";
     assert(_clus->_modules.size() != 0);
     assert(_cell->isStdCell()); //assert is standard cell (module includes preplaced blocks, I/O pins)
     int rowHeight = (int)(_cell->height()/_cir->rowHeight());
     Node* _newNode = new Node(_cell, rowHeight, _rowNum);
+    _newNode->set_x_pos(get_valid_pos(_cell,_rowNum));    
+    if(_newNode->_x_pos == DBL_MAX)
+    {
+        return false;
+    }
     _clus->_e += _cell->weight();   //numPins()
 
     //add module to _modules, _cellIdModuleMap
@@ -200,11 +213,12 @@ void Placer::AddCell_trial(Cluster* _clus,Module* _cell, int _rowNum)
     _clus->_delta_x.push_back(delta_x);
 
     // renew q
-    _clus->_q += (_cell->weight())*(_modPLPos[0][_cell->dbId()].x()-delta_x);
+    _clus->_q += (_cell->weight())*(_newNode->_x_pos-delta_x);
 
     
     // renew _x_ref
     set_x_to_site(_clus);
+    return true;
 }
 
 Cluster* Placer::Collapse_trial(Cluster* _clus)
@@ -257,7 +271,7 @@ Cluster* Placer::AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _cl
     {
         _clus->_modules.push_back(_prevClus->_modules[i]);
         _clus->_delta_x.push_back(_prevClus->_delta_x[i]-ref_dist);
-        _clus->_q += _prevClus->_modules[i]->_module->weight()*(_modPLPos[0][_prevClus->_modules[i]->_module->dbId()].x()-(_prevClus->_delta_x[i]-ref_dist));
+        _clus->_q += _prevClus->_modules[i]->_module->weight()*(_prevClus->_modules[i]->_x_pos-(_prevClus->_delta_x[i]-ref_dist));
         _clus->_cellIdModuleMap[_prevClus->_modules[i]->_module->dbId()] = _clus->_modules.size()-1;
     }
 
@@ -298,7 +312,7 @@ Cluster* Placer::AddCluster_trial_right(Module* _prevCell, Module* _cell, Cluste
     {
         _newClus->_modules.push_back(_clus->_modules[i]);
         _newClus->_delta_x.push_back(_clus->_delta_x[i]-ref_dist);
-        _newClus->_q += _clus->_modules[i]->_module->weight()*(_modPLPos[0][_clus->_modules[i]->_module->dbId()].x()-(_clus->_delta_x[i]-ref_dist));
+        _newClus->_q += _clus->_modules[i]->_module->weight()*(_clus->_modules[i]->_x_pos-(_clus->_delta_x[i]-ref_dist));
         _newClus->_cellIdModuleMap[_clus->_modules[i]->_module->dbId()] = _newClus->_modules.size()-1;
     }
 
@@ -528,16 +542,18 @@ bool Placer::Is_Cluster_Block_Overlap(Cluster* _clus, bool output) const
     return false;
 }
 
+//change to interval related
 bool Placer::Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum, bool output) const
 {
-    for(unsigned j = 0 ; j < _cir->row(_rowNum).numInterval() ; j++)
+    //for(unsigned j = 0 ; j < _cir->row(_rowNum).numInterval() ; j++)
+    for(unsigned j = 0 ; j < _intervals[_rowNum].size() ; j++)
     {
         //inside row interval -> good, no overlap wth preplaced block
-        if(_interval.first >= (int)_cir->row(_rowNum).interval(j).first && _interval.second <= (int)_cir->row(_rowNum).interval(j).second )
+        if(_interval.first >= _intervals[_rowNum][j].first && _interval.second <= _intervals[_rowNum][j].second )
         {
             return false;
         }
-        else if(_interval.first < (int)_cir->row(_rowNum).interval(j).first || j == _cir->row(_rowNum).numInterval()-1 )
+        else if(_interval.first < _intervals[_rowNum][j].first || j == _intervals[_rowNum].size()-1 )
         {
             if(output)
             {
@@ -569,4 +585,132 @@ double Placer::find_utilization()
     }
     //cout<<"Utilization rate = "<<(occupied_area/emtpy_area)<<endl;
     return (occupied_area/emtpy_area);
+}
+
+
+void Placer::set_intervals(int _id)
+{
+    for(unsigned i = 0 ; i < _cir->numRows(); i++) { _intervals[i].clear(); }
+    if(_id == -1)
+    {
+        //_cir->remove_sites_fence_region_all();
+        for(unsigned i = 0; i < _cir->numRows(); i++)
+        {
+            for(unsigned j = 0;j < _cir->row(i).numInterval(); j++)
+            {
+                _intervals[i].push_back(_cir->row(i).interval(j));
+            }
+        }
+    }
+    else
+    {
+        Fregion* _fregion =  &_cir->fregion(_id);
+        for(unsigned i = 0;i < _fregion->numRects(); i++)
+        {
+            for(unsigned j = _fregion->rect(i).bottom() ; j <= _fregion->rect(i).top() ; j+=_cir->rowHeight() )
+            {
+                int rowNum = _cir->y_2_row_id(j);
+                if(_intervals[rowNum].empty())
+                {
+                    _intervals[rowNum].push_back(make_pair(_fregion->rect(i).left(),_fregion->rect(i).right()));
+                }
+                else
+                {
+                    double right = _fregion->rect(i).right();
+                    double left = _fregion->rect(i).left();
+                    int num = _intervals[rowNum].size();
+                    for(int k = 0; k < num; k++)
+                    {
+                        //if(left == _intervals[rowNum][k].first && right ==_intervals[rowNum][k].second) break;
+                        if(left <= _intervals[rowNum][k].second && left >=_intervals[rowNum][k].first)
+                        {
+                            left = _intervals[rowNum][k].first;
+                            _intervals[rowNum].erase( _intervals[rowNum].begin()+k );
+                        }
+                        else if(right >= _intervals[rowNum][k].first && right <= _intervals[rowNum][k].second)
+                        {
+                            right = _intervals[rowNum][k].second;
+                            _intervals[rowNum].erase( _intervals[rowNum].begin()+k );  
+                        }
+                    }
+                    _intervals[rowNum].push_back(make_pair(left,right));
+                }                
+            }
+        }
+        for(unsigned i = 0 ; i < _cir->numRows() ; i++)
+        {
+            sort(_intervals[i].begin(), _intervals[i].end(), pair_compare);
+        }
+    }
+}
+
+//return DBL_MAX if the row not placeable
+double Placer::get_valid_pos(Module* _cell, int _rowId)
+{
+    double x_pos = _modPLPos[0][_cell->dbId()].x();
+    int _rowNum = (int)(_cell->height()/_cir->rowHeight());    
+
+    // find candidate position for left and right
+    double left_cand = x_pos, right_cand = x_pos;
+    bool left_valid = true, right_valid = true;
+    //find left_cand
+    for(int i = _rowId ; i < _rowId+_rowNum ; i++)
+    {
+        if(_intervals[i].empty()) { return DBL_MAX; }     //not a valid row to put in
+        vector<pair<int,int> > &_inter = _intervals[i];
+        for(int j = (int)_inter.size()-1 ; j >= 0  ; j--)
+        {
+            if(left_cand >= _inter[j].first && left_cand+_cell->width() <= _inter[j].second) { break; }
+            if(left_cand+_cell->width() > _inter[j].second)
+            {
+                left_cand = _inter[j].second-_cell->width();
+                break;
+            }
+        }
+    }
+    //find right_cand
+    for(int i = _rowId ; i < _rowId+_rowNum ; i++)
+    {
+        vector<pair<int,int> > &_inter = _intervals[i];
+        for(unsigned j = 0 ; j < _inter.size() ; j++)
+        {
+            if(right_cand >= _inter[j].first && right_cand+_cell->width() <= _inter[j].second) { break; }
+            if(right_cand < _inter[j].first)
+            {
+                right_cand = _inter[j].first;
+                break;
+            }
+        }
+    }
+    //cout<<" left_cand = "<<left_cand<<"; right_cand = "<<right_cand<<endl;
+
+    //determine validity
+    for(int i = _rowId ; i < _rowId+_rowNum ; i++)
+    {
+        vector<pair<int,int> > &_inter = _intervals[i];
+        if(right_valid)
+        {
+            for(unsigned j = 0 ; j < _inter.size() ; j++)
+            {
+                if(right_cand >= _inter[j].first && right_cand+_cell->width() <= _inter[j].second) { break; }
+                if(j == _inter.size()-1) { right_valid = false; }
+            }
+        }
+        if(left_valid)
+        {
+            for(unsigned j = 0 ; j < _inter.size() ; j++)
+            {
+                if(left_cand >= _inter[j].first && left_cand+_cell->width() <= _inter[j].second) { break; }
+                if(j == _inter.size()-1) { left_valid = false; }
+            }
+        }
+    }
+    //return position
+    if(!left_valid && !right_valid) { return DBL_MAX; }
+    else if(left_valid && !right_valid) { return left_cand; }
+    else if(right_valid && !left_valid) { return right_cand; }
+    else
+    {
+        return (abs(right_cand-x_pos)>abs(x_pos-left_cand))?left_cand:right_cand;
+    }
 }
