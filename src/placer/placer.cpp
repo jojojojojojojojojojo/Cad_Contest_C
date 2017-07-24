@@ -501,6 +501,8 @@ void Placer::try_area()
 {
     double _alpha = (find_utilization()>0.8)?0.005:0.000; // a function of the "density" of the design (subject to change)
     cout<<"Number Of modules = "<<_cir->numModules()<<endl;
+    set_intervals(0);
+    return;
     //cin.get();
     for(unsigned i = 0 ; i < _cir->numModules() ; i++)
     {
@@ -1424,3 +1426,53 @@ void Placer::set_x_to_site(Cluster* _clus)
     }
 }
 
+void Placer::set_intervals(int _id)
+{
+    if(_id == -1)
+    {
+        for(unsigned i = 0;i < _cir->numRows(); i++)
+        {
+            for(double j = 0;j < _cir->row(i).numInterval(); j++)
+            {
+                _intervals[i].push_back(_cir->row(i).interval(j));
+            }
+        }
+    }
+    else
+    {
+        Fregion* _fregion =  &_cir->fregion(_id);
+        for(unsigned i = 0;i < _fregion->numRects(); i++)
+        {
+            for(unsigned j = _fregion->rect(i).bottom() ; j <= _fregion->rect(i).top() ; j+=_cir->rowHeight() )
+            {
+                int rowNum = _cir->y_2_row_id(j);
+                if(_intervals[rowNum].size()==0)
+                {
+                    _intervals[rowNum].push_back(make_pair(_fregion->rect(i).left(),_fregion->rect(i).right()));
+                }
+                else
+                {
+                    double right = _fregion->rect(i).right();
+                    double left = _fregion->rect(i).left();
+                    int num = _intervals[rowNum].size();
+                    for(int k = 0; k < num; k++)
+                    {
+                        //if(left == _intervals[rowNum][k].first && right ==_intervals[rowNum][k].second) break;
+                        if(left <= _intervals[rowNum][k].second && left >=_intervals[rowNum][k].first)
+                        {
+                            left = _intervals[rowNum][k].first;
+                            _intervals[rowNum].erase( _intervals[rowNum].begin()+k );
+                        }
+                        else if(right >= _intervals[rowNum][k].first && right <= _intervals[rowNum][k].second)
+                        {
+                            right = _intervals[rowNum][k].second;
+                            _intervals[rowNum].erase( _intervals[rowNum].begin()+k );  
+                        }
+                    }
+                    _intervals[rowNum].push_back(make_pair(left,right));
+                }
+                
+            }
+        }
+    }
+}

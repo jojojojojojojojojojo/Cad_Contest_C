@@ -60,6 +60,7 @@ public:
         _cellIdClusterMap.resize(_cir->numModules(),0);
         prev_cells.resize(_cir->numRows());
         next_cells.resize(_cir->numRows());
+        _intervals.resize(_cir->numRows());
         for(unsigned i = 0 ; i < _cir->numRows() ; i++)
         {
             prev_cells[i].resize(_cir->numModules(),-1);
@@ -127,6 +128,7 @@ public:
     double reduce_DeadSpace_trial_fence(Module* _cell, int _rowNum, double _alpha);
     void set_x_to_site_fence(Cluster* _clus);
     */
+    void set_intervals(int _id);
     /////////////////////////////////////////////////
     //             Operating Functions             //
     /////////////////////////////////////////////////
@@ -185,7 +187,7 @@ private:
     vector< vector<int> > prev_cells;       // try to store it in static array to reduce time
     vector< vector<int> > next_cells;       // empty if value == -1
 
-    //vector<Row> _row;                       // for fregions
+    vector< vector< pair<int,int> > > _Intervals;                       // for fregions
 
     map<int, Cluster*> _clusters;           // store all clusters
 };
