@@ -1411,7 +1411,7 @@ void Placer::set_x_to_site(Cluster* _clus)
     if( rightshift > 0 )
     {
         _clus->_x_ref += rightshift;
-        _clus->_x_ref = _cir->g_x_on_site(_clus->_x_ref, 0, Circuit::ALIGN_HERE);
+        _clus->_x_ref = _cir->g_x_on_site(_clus->_x_ref, 0, Circuit::ALIGN_RIGHT);
     }
     if( leftshift > 0 )
     { 
