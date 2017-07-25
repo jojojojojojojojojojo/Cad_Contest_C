@@ -593,7 +593,7 @@ void Placer::set_intervals(int _id)
     for(unsigned i = 0 ; i < _cir->numRows(); i++) { _intervals[i].clear(); }
     if(_id == -1)
     {
-        //_cir->remove_sites_fence_region_all();
+        _cir->remove_sites_fence_region_all();
         for(unsigned i = 0; i < _cir->numRows(); i++)
         {
             for(unsigned j = 0;j < _cir->row(i).numInterval(); j++)
@@ -607,7 +607,7 @@ void Placer::set_intervals(int _id)
         Fregion* _fregion =  &_cir->fregion(_id);
         for(unsigned i = 0;i < _fregion->numRects(); i++)
         {
-            for(unsigned j = _fregion->rect(i).bottom() ; j <= _fregion->rect(i).top() ; j+=_cir->rowHeight() )
+            for(unsigned j = _fregion->rect(i).bottom() ; j < _fregion->rect(i).top() ; j+=_cir->rowHeight() )
             {
                 int rowNum = _cir->y_2_row_id(j);
                 if(_intervals[rowNum].empty())
@@ -642,6 +642,21 @@ void Placer::set_intervals(int _id)
             sort(_intervals[i].begin(), _intervals[i].end(), pair_compare);
         }
     }
+
+    GnuplotPlotter plotter;
+    plotter.setTitle("placement figure");
+    for(unsigned i = 0; i < _intervals.size(); i++)
+    {
+        if(_intervals[i].size()==0) continue;
+        for(unsigned j = 0; j < _intervals[i].size(); j++)
+        {
+            plotter.addRectangle(Rect(_intervals[i][j].first,_cir->row_id_2_y(i),_intervals[i][j].second,_cir->row_id_2_y(i)+_cir->rowHeight()));
+        }
+    }
+    // add rectangle of placement core reigon
+    plotter.addRectangle(_cir->chipRect());
+
+    plotter.outputPlotFile("Interval.plt");
 }
 
 //return DBL_MAX if the row not placeable
