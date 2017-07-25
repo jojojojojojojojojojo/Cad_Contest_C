@@ -20,11 +20,22 @@ int main( int argc, char ** argv )
     parser.parse();
 
     Placer placer( circuit );
-    placer.save_modules_2_pos(Placer::PL_INIT);
+    //placer.save_modules_2_pos(Placer::PL_INIT);
     circuit.setCellRegion();
 
-    placer.set_intervals(-1);
+    /*
+    placer.find_utilization();
+    for(unsigned i = 0 ; i < circuit.numFregions() ; i++)
+    {
+    	placer.clear();
+    	placer.init_fence(i);
+    	placer.set_intervals();
+    	placer.find_utilization();
+    }
+    cin.get();*/
+
     //placer.print_intervals();
+    //cin.get();
 
     //circuit.print_layers();
     //circuit.print_rows();
@@ -55,7 +66,7 @@ int main( int argc, char ** argv )
     //cin.get();
 
     double gp_hpwl = placer.compute_hpwl();
-    double utilize = placer.find_utilization();
+    //double utilize = placer.find_utilization();
     //circuit.print_rows();
     //cin.get();
     //placer.find_utilization();
@@ -64,20 +75,18 @@ int main( int argc, char ** argv )
     clock_t start, finish;
     finish = start = clock();
 
-    placer.place_all_mods_to_site();
-    //placer.fence();
-    placer.sort_cells();
 
     //placer.print_cell_order();
-    placer.try_area();
+    placer.legalize_all();
     //placer.try_area2();
 
+    /*
     if(circuit.check_all_std_cells_on_row_site())
     {
     	cout<<"*********All Cells On Site***********\n";
     }
     placer.check_all(circuit.numModules()-1);
-
+	*/
 
     //should not be 0
     finish = clock();
@@ -86,7 +95,7 @@ int main( int argc, char ** argv )
 
     double displacement = placer.compute_displacement(Placer::PL_INIT);
     double lg_hpwl = placer.compute_hpwl();
-    cout<<"Utilization = "<<utilize<<endl;
+    //cout<<"Utilization = "<<utilize<<endl;
     cout<<"GP GPWL = "<<gp_hpwl<<endl;
     cout<<"LG HPWL = "<<lg_hpwl<<endl;
     cout<<"Increase in HPWL = "<<((lg_hpwl-gp_hpwl)/gp_hpwl)*100<<"%"<<endl;

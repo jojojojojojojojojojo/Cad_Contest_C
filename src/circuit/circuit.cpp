@@ -406,26 +406,47 @@ void Circuit::outputGnuplotFigure(string filePathName)
     plotter.outputPlotFile(filePathName);
 }
 
-void Circuit::outputGnuplotFigureFence(string filePathName)
+void Circuit::outputGnuplotFigureFence(string filePathName, bool all, int fence_id)
 {
     GnuplotPlotter plotter;
     plotter.setNumOfFence(numFregions());
 
     plotter.setTitle("placement figure");
-    for (unsigned i = 0; i < _modules.size(); i++) {
-        Module &module = _modules[i];
-        int fenceRegionId = (_cellIdRegionMap[module.dbId()] == 0)?-1:_cellIdRegionMap[module.dbId()]->id();
-        plotter.addRectangleRegion(Rect(module.x(),module.y(),module.x()+module.width(),module.y()+module.height()),fenceRegionId);
-    }
-    
-    // add rectangle of placement core reigon
-    plotter.addRectangleRegion(_rectangleChip,-1);
-    for(unsigned i = 0 ; i < numFregions() ; i++)
+    if(all)
     {
-        for(unsigned j = 0 ; j < fregion(i).numRects() ; j++)
+        for (unsigned i = 0; i < _modules.size(); i++) {
+            Module &module = _modules[i];
+            int fenceRegionId = (_cellIdRegionMap[module.dbId()] == 0)?-1:_cellIdRegionMap[module.dbId()]->id();
+            plotter.addRectangleRegion(Rect(module.x(),module.y(),module.x()+module.width(),module.y()+module.height()),fenceRegionId);
+        }
+        
+        // add rectangle of placement core reigon
+        plotter.addRectangleRegion(_rectangleChip,-1);
+        for(unsigned i = 0 ; i < numFregions() ; i++)
         {
-            plotter.addRectangleRegion(fregion(i).rect(j),fregion(i).id());
+            for(unsigned j = 0 ; j < fregion(i).numRects() ; j++)
+            {
+                plotter.addRectangleRegion(fregion(i).rect(j),fregion(i).id());
+            }
         }
     }
+    else
+    {
+        for (unsigned i = 0; i < _modules.size(); i++) {
+            Module &module = _modules[i];
+            int fenceRegionId = (_cellIdRegionMap[module.dbId()] == 0)?-1:_cellIdRegionMap[module.dbId()]->id();
+            if(fenceRegionId != fence_id) continue;
+            plotter.addRectangleRegion(Rect(module.x(),module.y(),module.x()+module.width(),module.y()+module.height()),fenceRegionId);
+        }
+        plotter.addRectangleRegion(_rectangleChip,-1);
+        if(fence_id != -1)
+        {
+            for(unsigned j = 0 ; j < fregion(fence_id).numRects() ; j++)
+            {
+                plotter.addRectangleRegion(fregion(fence_id).rect(j),fregion(fence_id).id());
+            }
+        }
+    }
+    
     plotter.outputPlotFileFence(filePathName);
 }

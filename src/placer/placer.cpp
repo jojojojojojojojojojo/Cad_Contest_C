@@ -332,6 +332,7 @@ void Placer::print_fanins_fanouts(Cluster* _clus) const
 
 bool Placer::check_all(int to_index) const
 {
+    bool noBlockOverlap = true;
     int numOfOverlap = 0;
     int numOfOutOfBound = 0;
     vector< vector< pair<int,double> > > temp_nodes;
@@ -340,6 +341,9 @@ bool Placer::check_all(int to_index) const
     {
         int index = cell_order[i];
         if(!_cir->module(index).isStdCell()) continue;
+        if(_fence_id == -1 && _cir->cellRegion(index) != 0) continue;
+        if(_fence_id != -1 && (_cir->cellRegion(index) == 0 || (int)_cir->cellRegion(index)->id() != _fence_id)) continue;
+        
         Cluster* _clus = _cellIdClusterMap[_cir->module(index).dbId()];
         assert(_clus != 0);
         assert(_clus->_cellIdModuleMap.find(_cir->module(index).dbId()) != _clus->_cellIdModuleMap.end());
@@ -348,18 +352,28 @@ bool Placer::check_all(int to_index) const
         {
             temp_nodes[_clus->_modules[inclusIndex]->_rowId+j].push_back(make_pair(index,_clus->_x_ref+_clus->_delta_x[inclusIndex]));
         }
+        /*
         if(_clus->_x_ref+_clus->_delta_x[inclusIndex]<_cir->chipRect().left() || _clus->_x_ref+_clus->_delta_x[inclusIndex]+_cir->module(index).width()>_cir->chipRect().right())
         {
             numOfOutOfBound++;
             if(_clus->_x_ref+_clus->_delta_x[inclusIndex]<_cir->chipRect().left()){ cout<<"Too Small (<0)\n"; }
             else {cout<<"Too Large(> boundary)\n";}
-        }
+        }*/
     }
     for(unsigned i = 0 ; i < _cir->numRows() ; i++)
     {
         sort(temp_nodes[i].begin(), temp_nodes[i].end(), pair_compare);
     }
-
+    for(unsigned i = 0 ; i < _cir->numRows() ; i++)
+    {
+        if(temp_nodes[i].empty()) { continue; }
+        int index = temp_nodes[i].back().first;
+        double width = _cir->module(index).width();
+        if(temp_nodes[i][0].second < _intervals[i][0].first || temp_nodes[i].back().second+width > _intervals[i].back().second)
+        {
+            numOfOutOfBound++;
+        }
+    }
     for(unsigned i = 0 ; i < _cir->numRows() ; i++)
     {
         if(temp_nodes[i].empty()) { continue; }
@@ -372,6 +386,7 @@ bool Placer::check_all(int to_index) const
             if(temp_nodes[i][j].second+width > temp_nodes[i][j+1].second)
             {
                 cout<<"\nOverlap Ocurred in row #"<<i<<endl;
+                /*
                 cout<<"Module : < "<<_cir->module(index).name()<<" > overlaps with ";
                 cout<<"module : <  "<<_cir->module(next_index).name()<<" >"<<endl;
                 //cout<<"First Module position = "<<temp_nodes[i][j].second<<endl;
@@ -383,7 +398,7 @@ bool Placer::check_all(int to_index) const
 
                 cout<<"Module <"<<_cir->module(next_index).name()<<"> orig position = "<<_modPLPos[0][next_index].x()<<endl;
                 print_delta_x(_cellIdClusterMap[_cir->module(next_index).dbId()]);
-
+                */
                 //int prev_id = prev_cells[i].find(_cir->module(index).dbId())->second;
                 //int prev_id = prev_cells[i][_cir->module(index).dbId()];
                 //cout<<"But Prev Module : < "<<_cir->module(prev_id).name()<<" >\n";
@@ -395,17 +410,19 @@ bool Placer::check_all(int to_index) const
                 numOfOverlap++;
             }
         }
-    }    
+    }
     cout<<"******Check Preplaced block/IO pins overlap (No overlap if no output)******\n";
     for(map<int,Cluster*>::const_iterator iter = _clusters.begin() ; iter != _clusters.end() ; ++iter)
     {
         //Output Overlap information
-        Is_Cluster_Block_Overlap(iter->second,true);
+        if(iter->second->_fence_id != _fence_id) continue;
+        bool temp = Is_Cluster_Block_Overlap(iter->second,true);
+        noBlockOverlap = (noBlockOverlap)?!temp:noBlockOverlap;
     }    
     cout<<"*************CHECK REPORT****************"<<endl;
     cout<<"number of overlaps = "<<numOfOverlap<<endl;
-    cout<<"number of out of boundary = "<<numOfOutOfBound<<endl;
-    return (numOfOverlap!=0);   //return true if there is overlap
+    cout<<"number of row out of boundary = "<<numOfOutOfBound<<endl;
+    return (numOfOverlap ==0 && numOfOutOfBound == 0 && noBlockOverlap);   //return true if there is overlap
 }
 
 void Placer::print_delta_x(Cluster* _clus) const
@@ -441,6 +458,7 @@ void Placer::print_intervals() const
     for(unsigned i = 0 ; i < _cir->numRows() ; i++)
     {
         const vector<pair<int,int> > &interval = _intervals[i];
+        if(interval.empty()) continue;
         cout<<"\n**************ROW #"<<i<<"**************\n";
         for(unsigned j = 0 ; j < interval.size() ; j++)
         {
@@ -511,7 +529,7 @@ bool Placer::check_cluster_internal_overlap(Cluster* _clus)
 }
 
 //this area is made just to try some functionalities of the code
-void Placer::try_area()
+void Placer::legalize()
 {
     double _alpha = (find_utilization()>0.8)?0.005:0.000; // a function of the "density" of the design (subject to change)
     cout<<"Number Of modules = "<<_cir->numModules()<<endl;
@@ -520,8 +538,10 @@ void Placer::try_area()
     //cin.get();
     for(unsigned i = 0 ; i < _cir->numModules() ; i++)
     {
-        if(i % 1000 == 0){ cout<<"Placing Module number : "<<i<<endl;}
+        if(i % 10000 == 0){ cout<<"Placing Module number : "<<i<<endl;}
         if(!_cir->module(cell_order[i]).isStdCell()) continue;
+        if(_fence_id == -1 && _cir->cellRegion(cell_order[i]) != 0) continue;
+        if(_fence_id != -1 && (_cir->cellRegion(cell_order[i]) == 0 || (int)_cir->cellRegion(cell_order[i])->id() != _fence_id)) continue;
         //if(_cir->cellRegion(cell_order[i]) != 0) continue;
 
         Module* _cell = &_cir->module(cell_order[i]);
@@ -612,18 +632,38 @@ void Placer::try_area()
             assert(reduce_DeadSpace(_cell,row_best));
         }
     }
-    //assert(!check_all(_cir->numModules()-1));
+    //assert(check_all(_cir->numModules()-1));
+    //check_all(_cir->numModules()-1);
+}
 
-    cout<<"Now renew Position\n";
-    //cout<<"Cluster number = "<<_clusters.size()<<endl;
-    //int counter = 0;
-    for(map<int,Cluster*>::iterator iter = _clusters.begin() ; iter != _clusters.end() ; ++iter)
+void Placer::legalize_all()
+{
+    bool success = true;
+
+    place_all_mods_to_site();
+    sort_cells();
+
+    init_fence(-1);
+    legalize();
+    bool region_succeed = check_all(_cir->numModules()-1);
+    success = (success)?region_succeed:false;
+    clear();
+
+    for(unsigned i = 0 ; i < _cir->numFregions() ; i++)
     {
-        //cout<<"counter = "<<counter;
-        //counter++;
-        RenewPosition(*(iter->second));
+        cout<<endl;
+        init_fence(i);
+        legalize();
+        bool region_succeed = check_all(_cir->numModules()-1);
+        success = (success)?region_succeed:false;
+        clear();
     }
-    cout<<"Cluster number = "<<_clusters.size()<<endl;
+
+    Renew_All_Position();
+
+    cout<<"******************* RESULT *********************"<<endl;
+    cout<<"*** "<<((success)?"SUCCESS !!":"FAIL !!")<<endl;
+    cout<<"************************************************"<<endl;
 }
 
 /////////////////////////////////////////////////
@@ -781,7 +821,8 @@ Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell, bool _clus2prevClu
         {
             _prevClus->_modules.push_back(_clus->_modules[i]);
             _prevClus->_delta_x.push_back(_clus->_delta_x[i]+ref_dist);
-            _prevClus->_q += _clus->_modules[i]->_module->weight()*(_clus->_modules[i]->_x_pos-(_clus->_delta_x[i]+ref_dist));
+            //_prevClus->_q += _clus->_modules[i]->_module->weight()*(_clus->_modules[i]->_x_pos-(_clus->_delta_x[i]+ref_dist));
+            _prevClus->_q += _clus->_modules[i]->_module->weight()*(_modPLPos[0][_clus->_modules[i]->_module->dbId()].x()-(_clus->_delta_x[i]+ref_dist));
             _prevClus->_cellIdModuleMap[_clus->_modules[i]->_module->dbId()] = _prevClus->_modules.size()-1;
         }
 
@@ -836,7 +877,8 @@ Cluster* Placer::AddCluster(Module* _prevCell, Module* _cell, bool _clus2prevClu
         {
             _clus->_modules.push_back(_prevClus->_modules[i]);
             _clus->_delta_x.push_back(_prevClus->_delta_x[i]-ref_dist);
-            _clus->_q += _prevClus->_modules[i]->_module->weight()*(_prevClus->_modules[i]->_x_pos-(_prevClus->_delta_x[i]-ref_dist));
+            //_clus->_q += _prevClus->_modules[i]->_module->weight()*(_prevClus->_modules[i]->_x_pos-(_prevClus->_delta_x[i]-ref_dist));
+            _clus->_q += _prevClus->_modules[i]->_module->weight()*(_modPLPos[0][_prevClus->_modules[i]->_module->dbId()].x()-(_prevClus->_delta_x[i]-ref_dist));
             _clus->_cellIdModuleMap[_prevClus->_modules[i]->_module->dbId()] = _clus->_modules.size()-1;
         }
 
@@ -944,7 +986,7 @@ Cluster* Placer::Decluster(Cluster* _clus, const vector<int>& _ori_delta_x)
                 ////////////////////////////////
                 //          DECLUSTER!        //
                 ////////////////////////////////
-                Cluster *_newClus =new Cluster();
+                Cluster *_newClus =new Cluster(_fence_id);
                 _newClus->_e += this_cell->_module->weight();   //numPins()
                 _newClus->_modules.push_back(this_cell);
                 _newClus->_cellIdModuleMap[this_cell->_module->dbId()] = _newClus->_modules.size()-1;
@@ -970,7 +1012,7 @@ Cluster* Placer::Decluster(Cluster* _clus, const vector<int>& _ori_delta_x)
     if(decluster_occur)
     {
         //create new cluster for current cluster, renew data members and delete old cluster
-        Cluster* _clus_after = new Cluster();
+        Cluster* _clus_after = new Cluster(_fence_id);
         //int delta_ref  = INT_MIN;
         for(unsigned i = 0 ; i < _clus->_modules.size() ; i++)
         {
@@ -1086,7 +1128,7 @@ bool Placer::reduce_DeadSpace(Module* _cell, int _rowNum)
             {
                 return false;
             }
-            _clus = new Cluster();
+            _clus = new Cluster(_fence_id);
             Node* _newNode = new Node(_cell, 1 , _rowNum);
             _clus->_e += _cell->weight();   //numPins()
 
@@ -1133,7 +1175,7 @@ bool Placer::reduce_DeadSpace(Module* _cell, int _rowNum)
         {
             find_deadSpace = true;
 
-            _clus = new Cluster();
+            _clus = new Cluster(_fence_id);
             Node* _newNode = new Node(_cell, 1 , _rowNum);
             _clus->_e += _cell->weight();   //numPins()
 
@@ -1171,7 +1213,7 @@ bool Placer::reduce_DeadSpace(Module* _cell, int _rowNum)
                     {
                         return false;
                     }
-                    _clus = new Cluster();
+                    _clus = new Cluster(_fence_id);
                     Node* _newNode = new Node(_cell, 1 , _rowNum);
                     _clus->_e += _cell->weight();   //numPins()
 
@@ -1369,7 +1411,7 @@ void Placer::set_x_to_site(Cluster* _clus)
     }
     double rightshift = 0;
     double leftshift  = 0;
-    ///*
+    //*
     for(unsigned i = 0 ; i < _cir->numRows() ; i++)
     {
         if(_intervals[i].empty()) continue;
@@ -1389,7 +1431,7 @@ void Placer::set_x_to_site(Cluster* _clus)
         for(unsigned j = 0 ; j < _intervals[i].size() ; j++)
         {
             if(_intervals[i][j].first <= leftmosts[i] && _intervals[i][j].second >= rightmosts[i]) { break; }
-            if(_intervals[i][j].first > rightmosts[i]) { break; }
+            if(j != 0 && _intervals[i][j-1].second > leftmosts[i]) { break; }
             if(_intervals[i][j].first - leftmosts[i] > rightshift)
             {
                 rightshift = (_intervals[i][0].first - leftmosts[i]);
@@ -1399,18 +1441,25 @@ void Placer::set_x_to_site(Cluster* _clus)
         for(int j = (int)_intervals[i].size()-1 ; j >= 0 ; j--)
         { 
             if(_intervals[i][j].first <= leftmosts[i] && _intervals[i][j].second >= rightmosts[i]) { break; }
-            if(_intervals[i][j].second < leftmosts[i]) { break; }
+            if(j != (int)_intervals[i].size()-1 && _intervals[i][j+1].first < rightmosts[i]) { break; }
             if(rightmosts[i] - _intervals[i][j].second > leftshift)
             { 
                 leftshift = rightmosts[i] - _intervals[i].back().second;
             } 
-        }    
-    }*/
-    //assert(!(rightshift>0&&leftshift>0));
+        }
+    }
+    
+    if(rightshift != 0 && leftshift != 0) 
+    {
+        if(rightshift >= leftshift) { rightshift = 0; }
+        else { leftshift = 0; }
+    }
+    assert(rightshift ==0 || leftshift == 0);*/
+
     if( rightshift > 0 )
     {
         _clus->_x_ref += rightshift;
-        _clus->_x_ref = _cir->g_x_on_site(_clus->_x_ref, 0, Circuit::ALIGN_HERE);
+        _clus->_x_ref = _cir->g_x_on_site(_clus->_x_ref, 0, Circuit::ALIGN_RIGHT);
     }
     if( leftshift > 0 )
     { 

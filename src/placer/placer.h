@@ -19,7 +19,7 @@ class Cluster
 {
     friend class Placer;
 public:
-    Cluster():id(global_id), _e(0), _q(0), _cost(0), dead(false){ global_id++; }
+    Cluster(int fence_id = -1):id(global_id), _e(0), _q(0), _cost(0), _fence_id(fence_id) { global_id++; }
     Cluster(const Cluster& n){
         id = n.id;
         _ref_module = n._ref_module;
@@ -28,6 +28,7 @@ public:
         _q = n._q;
         _delta_x = n._delta_x;
         _cost = n._cost;
+        _fence_id = n._fence_id;
         _lastNode = n._lastNode;
         _cellIdModuleMap = n._cellIdModuleMap;
         _modules = n._modules;
@@ -44,7 +45,7 @@ private:
     double _q;                  //cluster q
     vector<int> _delta_x;       //delta position of _modules[i] to ref (same index as in _modules)
     double _cost;               //stored cost
-    bool dead;
+    int _fence_id;               //fence region
 
     map<int,int> _lastNode;     //last node in each row (first: rowId, second: index in _modules)
     map<int,int> _cellIdModuleMap;// mapping between cell id and _modules (first: cellId, second: index in _modules)
@@ -54,7 +55,7 @@ private:
 class Placer
 {
 public:
-    Placer(Circuit &inCir): _cir(&inCir), _modPLPos(0) {
+    Placer(Circuit &inCir): _cir(&inCir), _modPLPos(0), _fence_id(-1) {
         _modPLPos.resize( 3, vector<Point>( _cir->numModules() ) );
         _rowIdClusterMap.resize(_cir->numRows(),0);
         _cellIdClusterMap.resize(_cir->numModules(),0);
@@ -72,6 +73,11 @@ public:
     }
 
     //void place();
+    /////////////////////////////////////////////
+    // Clear and Initialize (in placer 2)
+    /////////////////////////////////////////////
+    void clear();
+    void init_fence(int fence_id);
 
     /////////////////////////////////////////////
     // get
@@ -111,7 +117,8 @@ public:
     bool check_cluster_internal_overlap(Cluster* _clus);
     bool check_all(int to_index) const;
 
-    void try_area();
+    void legalize();
+    void legalize_all();
     //void try_area2();
 
     /////////////////////////////////////////////////
@@ -167,8 +174,9 @@ public:
     double reduce_DeadSpace_trial_fence(Module* _cell, int _rowNum, double _alpha);
     void set_x_to_site_fence(Cluster* _clus);
     */
-    void set_intervals(int _id);
+    void set_intervals();
     double get_valid_pos(Module* _module, int _rowId);
+    void Renew_All_Position();
 
 
     Circuit &cir() {return *_cir;}
@@ -192,6 +200,7 @@ private:
     vector< vector<int> > next_cells;       // empty if value == -1
 
     vector< vector< pair<int,int> > > _intervals;   // for fregions (first index : rows ; second index : intervals)
+    int _fence_id;                          // fence region id the placer is currently placing
 
     map<int, Cluster*> _clusters;           // store all clusters
 };

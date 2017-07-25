@@ -9,6 +9,25 @@ bool pair_compare(pair<int,int>& _p1, pair<int,int>& _p2)
     return (_p1.second<_p2.second);
 }
 
+void Placer::clear()
+{
+    fill(_rowIdClusterMap.begin(),_rowIdClusterMap.end(),(Cluster*)(0));
+    fill(_cellIdClusterMap.begin(),_cellIdClusterMap.end(),(Cluster*)(0));
+    for(unsigned i = 0 ; i < _cir->numRows() ; i++)
+    {
+        fill(prev_cells[i].begin(),prev_cells[i].end(),-1);
+        fill(next_cells[i].begin(),next_cells[i].end(),-1);
+    }
+    _intervals.clear();
+    _intervals.resize(_cir->numRows());
+}
+
+void Placer::init_fence(int fence_id)
+{
+    _fence_id = fence_id;
+    set_intervals();
+}
+
 double Placer::Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum)
 {
     /*
@@ -25,6 +44,7 @@ double Placer::Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum)
 
     Cluster* _cluster = 0;
     int maxX = INT_MIN;
+    double valid_pos = get_valid_pos(_cell,rowNum);
     for(int j = 0 ; j < rowHeight ; j++ )
     {
         if(_rowIdClusterMap[rowNum+j] == 0) continue;
@@ -34,7 +54,8 @@ double Placer::Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum)
         if(rightmost_x > maxX ) 
         {
             maxX = rightmost_x;
-            if(rightmost_x > (_modPLPos[0][_cell->dbId()].x()))
+            //if(rightmost_x > (_modPLPos[0][_cell->dbId()].x()))
+            if(rightmost_x > (valid_pos))
             {
                 _cluster = _lastClus;
             }
@@ -42,7 +63,7 @@ double Placer::Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum)
     }
     if(_cluster == 0) // new cluster
     {
-        _cluster = new Cluster();
+        _cluster = new Cluster(_fence_id);
         _clusters[_cluster->id] = _cluster;
         AddCell(_cluster, _cell, rowNum, true);
         _cluster = Collapse(_cluster);//,i==18363);
@@ -73,6 +94,7 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
     }
     Cluster* _cluster = 0;
     int maxX = INT_MIN;
+    double valid_pos = get_valid_pos(_cell,rowNum);
     //vector<int> _rightmosts;
     //_rightmosts.resize(rowHeight,INT_MIN);
     for(int j = 0 ; j < rowHeight ; j++ )
@@ -84,7 +106,8 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
         if(rightmost_x > maxX ) 
         {
             maxX = rightmost_x;
-            if(rightmost_x > (_modPLPos[0][_cell->dbId()].x()))
+            //if(rightmost_x > (_modPLPos[0][_cell->dbId()].x()))
+            if(rightmost_x > valid_pos)
             {
                 _cluster = _lastClus;
             }
@@ -94,9 +117,9 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
     if(_cluster == 0) // new cluster
     {
         //cout<<"new cluster\n";
-        Cluster *_clus = new Cluster();
+        Cluster *_clus = new Cluster(_fence_id);
         Node* _newNode = new Node(_cell, rowHeight, rowNum);
-        _newNode->set_x_pos(get_valid_pos(_cell,rowNum));    
+        _newNode->set_x_pos(valid_pos);    
         if(_newNode->_x_pos == DBL_MAX) { return DBL_MAX; }
         _clus->_e += _cell->weight();
         _clus->_modules.push_back(_newNode);
@@ -271,7 +294,8 @@ Cluster* Placer::AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _cl
     {
         _clus->_modules.push_back(_prevClus->_modules[i]);
         _clus->_delta_x.push_back(_prevClus->_delta_x[i]-ref_dist);
-        _clus->_q += _prevClus->_modules[i]->_module->weight()*(_prevClus->_modules[i]->_x_pos-(_prevClus->_delta_x[i]-ref_dist));
+        //_clus->_q += _prevClus->_modules[i]->_module->weight()*(_prevClus->_modules[i]->_x_pos-(_prevClus->_delta_x[i]-ref_dist));
+        _clus->_q += _prevClus->_modules[i]->_module->weight()*(_modPLPos[0][_prevClus->_modules[i]->_module->dbId()].x()-(_prevClus->_delta_x[i]-ref_dist));
         _clus->_cellIdModuleMap[_prevClus->_modules[i]->_module->dbId()] = _clus->_modules.size()-1;
     }
 
@@ -312,7 +336,8 @@ Cluster* Placer::AddCluster_trial_right(Module* _prevCell, Module* _cell, Cluste
     {
         _newClus->_modules.push_back(_clus->_modules[i]);
         _newClus->_delta_x.push_back(_clus->_delta_x[i]-ref_dist);
-        _newClus->_q += _clus->_modules[i]->_module->weight()*(_clus->_modules[i]->_x_pos-(_clus->_delta_x[i]-ref_dist));
+        //_newClus->_q += _clus->_modules[i]->_module->weight()*(_clus->_modules[i]->_x_pos-(_clus->_delta_x[i]-ref_dist));
+        _newClus->_q += _clus->_modules[i]->_module->weight()*(_modPLPos[0][_clus->_modules[i]->_module->dbId()].x()-(_clus->_delta_x[i]-ref_dist));
         _newClus->_cellIdModuleMap[_clus->_modules[i]->_module->dbId()] = _newClus->_modules.size()-1;
     }
 
@@ -533,7 +558,7 @@ bool Placer::Is_Cluster_Block_Overlap(Cluster* _clus, bool output) const
             { 
                 if(output)
                 {
-                    print_delta_x(_clus);
+                    //print_delta_x(_clus);
                 }
                 return true; 
             }
@@ -546,6 +571,7 @@ bool Placer::Is_Cluster_Block_Overlap(Cluster* _clus, bool output) const
 bool Placer::Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum, bool output) const
 {
     //for(unsigned j = 0 ; j < _cir->row(_rowNum).numInterval() ; j++)
+    if(_intervals[_rowNum].empty()){ return true; }
     for(unsigned j = 0 ; j < _intervals[_rowNum].size() ; j++)
     {
         //inside row interval -> good, no overlap wth preplaced block
@@ -568,32 +594,53 @@ bool Placer::Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum, boo
     return true;
 }
 
+//find utilzation according to _intervals
 double Placer::find_utilization()
 {
-    double emtpy_area = _cir->chipRect().area();
+    //double emtpy_area = _cir->chipRect().area();
+    double emtpy_area = 0;
     double occupied_area = 0;
-    for(unsigned i = 0 ; i < _cir->numModules() ; i++)
+    for(unsigned i = 0 ; i < _cir->numRows() ; i++)
     {
-        if(!_cir->module(i).isStdCell())
+        for(unsigned j = 0 ; j < _intervals[i].size() ; j++)
         {
-            emtpy_area -= _cir->module(i).width()*_cir->module(i).height();
-        }
-        else
-        {
-            occupied_area += _cir->module(i).width()*_cir->module(i).height();
+            emtpy_area += (_intervals[i][j].second-_intervals[i][j].first)*_cir->rowHeight();
         }
     }
-    //cout<<"Utilization rate = "<<(occupied_area/emtpy_area)<<endl;
+    for(unsigned i = 0 ; i < _cir->numModules() ; i++)
+    {
+        /*if(!_cir->module(i).isStdCell())
+        {
+            emtpy_area -= _cir->module(i).width()*_cir->module(i).height();
+        }else*/
+        if(_cir->module(i).isStdCell())
+        {
+            if(_fence_id == -1 && _cir->cellRegion(_cir->module(i).dbId()) == 0)
+            {
+                occupied_area += _cir->module(i).width()*_cir->module(i).height();
+            }
+            else if(_fence_id != -1 && _cir->cellRegion(_cir->module(i).dbId()) != 0&&(int)_cir->cellRegion(_cir->module(i).dbId())->id() == _fence_id)
+            {
+                occupied_area += _cir->module(i).width()*_cir->module(i).height();
+            }
+        }        
+    }
+    /*
+    cout<<"Occupied area = "<<occupied_area<<endl;
+    cout<<"Empty area = "<<emtpy_area<<endl;
+    cout<<"Utilization rate = "<<(occupied_area/emtpy_area)<<endl;*/
     return (occupied_area/emtpy_area);
 }
 
 
-void Placer::set_intervals(int _id)
+void Placer::set_intervals()
 {
+    assert(_intervals.size() == _cir->numRows());
+    int _id = _fence_id;
     for(unsigned i = 0 ; i < _cir->numRows(); i++) { _intervals[i].clear(); }
     if(_id == -1)
     {
-        //_cir->remove_sites_fence_region_all();
+        _cir->remove_sites_fence_region_all();
         for(unsigned i = 0; i < _cir->numRows(); i++)
         {
             for(unsigned j = 0;j < _cir->row(i).numInterval(); j++)
@@ -607,7 +654,7 @@ void Placer::set_intervals(int _id)
         Fregion* _fregion =  &_cir->fregion(_id);
         for(unsigned i = 0;i < _fregion->numRects(); i++)
         {
-            for(unsigned j = _fregion->rect(i).bottom() ; j <= _fregion->rect(i).top() ; j+=_cir->rowHeight() )
+            for(unsigned j = _fregion->rect(i).bottom() ; j < _fregion->rect(i).top() ; j+=_cir->rowHeight() )
             {
                 int rowNum = _cir->y_2_row_id(j);
                 if(_intervals[rowNum].empty())
@@ -713,4 +760,19 @@ double Placer::get_valid_pos(Module* _cell, int _rowId)
     {
         return (abs(right_cand-x_pos)>abs(x_pos-left_cand))?left_cand:right_cand;
     }
+}
+
+void Placer::Renew_All_Position()
+{
+    cout<<"Now renew Position\n";
+    //cout<<"Cluster number = "<<_clusters.size()<<endl;
+    //int counter = 0;
+    for(map<int,Cluster*>::iterator iter = _clusters.begin() ; iter != _clusters.end() ; ++iter)
+    {
+        //cout<<"counter = "<<counter;
+        //counter++;
+        RenewPosition(*(iter->second));
+    }
+
+    cout<<"Cluster number = "<<_clusters.size()<<endl;
 }
