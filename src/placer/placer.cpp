@@ -515,14 +515,15 @@ void Placer::try_area()
 {
     double _alpha = (find_utilization()>0.8)?0.005:0.000; // a function of the "density" of the design (subject to change)
     cout<<"Number Of modules = "<<_cir->numModules()<<endl;
-    //set_intervals(0);
+    set_intervals(0);
     //return;
     //cin.get();
     for(unsigned i = 0 ; i < _cir->numModules() ; i++)
     {
         if(i % 1000 == 0){ cout<<"Placing Module number : "<<i<<endl;}
         if(!_cir->module(cell_order[i]).isStdCell()) continue;
-        //if(_cir->cellRegion(cell_order[i]) != 0) continue;
+        if(_cir->cellRegion(cell_order[i])==0) continue;
+        if(_cir->cellRegion(cell_order[i])->id() != 0) continue;
 
         Module* _cell = &_cir->module(cell_order[i]);
         int rowHeight = (int)(_cell->height()/_cir->rowHeight());
@@ -533,7 +534,7 @@ void Placer::try_area()
 
         
         //cout<<"Module x_pox = "<<_modPLPos[0][_cell->dbId()].x()<<" ; Row #"<<rowNum;
-        //cout<<"; valid = "<<get_valid_pos(_cell,rowNum)<<endl;
+        //cout<<"; valid = "<<(_cell,rowNum)<<endl;
         //cin.get();
         //continue;
         //find previous cluster (with max x position) if one exist
