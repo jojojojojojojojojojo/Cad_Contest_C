@@ -533,7 +533,6 @@ void Placer::legalize()
 {
     double _alpha = (find_utilization()>0.8)?0.005:0.000; // a function of the "density" of the design (subject to change)
     cout<<"Number Of modules = "<<_cir->numModules()<<endl;
-    //set_intervals(0);
     //return;
     //cin.get();
     for(unsigned i = 0 ; i < _cir->numModules() ; i++)

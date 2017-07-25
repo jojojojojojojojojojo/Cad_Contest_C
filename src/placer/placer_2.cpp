@@ -44,7 +44,6 @@ double Placer::Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum)
 
     Cluster* _cluster = 0;
     int maxX = INT_MIN;
-    double valid_pos = get_valid_pos(_cell,rowNum);
     for(int j = 0 ; j < rowHeight ; j++ )
     {
         if(_rowIdClusterMap[rowNum+j] == 0) continue;
@@ -54,8 +53,7 @@ double Placer::Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum)
         if(rightmost_x > maxX ) 
         {
             maxX = rightmost_x;
-            //if(rightmost_x > (_modPLPos[0][_cell->dbId()].x()))
-            if(rightmost_x > (valid_pos))
+            if(rightmost_x > (_modPLPos[0][_cell->dbId()].x()))
             {
                 _cluster = _lastClus;
             }
@@ -94,7 +92,6 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
     }
     Cluster* _cluster = 0;
     int maxX = INT_MIN;
-    double valid_pos = get_valid_pos(_cell,rowNum);
     //vector<int> _rightmosts;
     //_rightmosts.resize(rowHeight,INT_MIN);
     for(int j = 0 ; j < rowHeight ; j++ )
@@ -106,8 +103,7 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
         if(rightmost_x > maxX ) 
         {
             maxX = rightmost_x;
-            //if(rightmost_x > (_modPLPos[0][_cell->dbId()].x()))
-            if(rightmost_x > valid_pos)
+            if(rightmost_x > (_modPLPos[0][_cell->dbId()].x()))
             {
                 _cluster = _lastClus;
             }
@@ -119,7 +115,7 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
         //cout<<"new cluster\n";
         Cluster *_clus = new Cluster(_fence_id);
         Node* _newNode = new Node(_cell, rowHeight, rowNum);
-        _newNode->set_x_pos(valid_pos);    
+        _newNode->set_x_pos(get_valid_pos(_cell,rowNum));    
         if(_newNode->_x_pos == DBL_MAX) { return DBL_MAX; }
         _clus->_e += _cell->weight();
         _clus->_modules.push_back(_newNode);
