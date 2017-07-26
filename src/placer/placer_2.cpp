@@ -64,15 +64,21 @@ double Placer::Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum)
         _cluster = new Cluster(_fence_id);
         _clusters[_cluster->id] = _cluster;
         AddCell(_cluster, _cell, rowNum, true);
-        _cluster = Collapse(_cluster);//,i==18363);
-        _cluster = Collapse_right(_cluster);
+        while(CheckOverlap(_cluster) != make_pair(0,0) || CheckOverlap_right(_cluster) != make_pair(0,0))
+        {
+            _cluster = Collapse(_cluster);//,i==18363);
+            _cluster = Collapse_right(_cluster);
+        }        
         _cluster->_cost = RenewCost(*_cluster);
     }
     else              // add to _cluster
     {
         AddCell(_cluster, _cell, rowNum, false);
-        _cluster = Collapse(_cluster);//,i==18363);
-        _cluster = Collapse_right(_cluster);
+        while(CheckOverlap(_cluster) != make_pair(0,0) || CheckOverlap_right(_cluster) != make_pair(0,0))
+        {
+            _cluster = Collapse(_cluster);//,i==18363);
+            _cluster = Collapse_right(_cluster);
+        }
         _cluster->_cost = RenewCost(*_cluster);
     }
     /*
@@ -138,8 +144,11 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
         set_x_to_site(_clus);
         //double cost = RenewCost(*_clus);
 
-        _clus = Collapse_trial(_clus);
-        _clus = Collapse_trial_right(_clus);
+        while(CheckOverlap_trial(_clus)!=make_pair(0,0) || CheckOverlap_trial_right(_clus)!=make_pair(0,0))
+        {
+            _clus = Collapse_trial(_clus);
+            _clus = Collapse_trial_right(_clus);
+        }
         double cost = RenewCost(*_clus) - _clus->_cost;
 
 
@@ -162,8 +171,11 @@ double Placer::Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum)
         //cout<<"Collapsed\n";
         Cluster *temp = new Cluster(*_cluster);
         if(!AddCell_trial(temp, _cell, rowNum)) { return DBL_MAX; }
-        temp = Collapse_trial(temp);//,i==18363);
-        temp = Collapse_trial_right(temp);
+        while(CheckOverlap_trial(temp)!=make_pair(0,0) || CheckOverlap_trial_right(temp)!=make_pair(0,0))
+        {
+            temp = Collapse_trial(temp);//,i==18363);
+            temp = Collapse_trial_right(temp);
+        }
         double cost = RenewCost(*temp) - temp->_cost;
 
         if(Is_Cluster_Block_Overlap(temp)){ cost = DBL_MAX; }
@@ -390,20 +402,20 @@ double Placer::reduce_DeadSpace_trial(Module* _cell, int _rowNum, double _alpha)
     //search the dead space cells by cells from the last cell in _rowNum
     while(!find_deadSpace)
     {
-        /*
+        ///*
         if(last_cell_left_x < prev_cell_right_x)
         {
             cout<<"last_cell_left_x = "<<last_cell_left_x<<endl;
             cout<<"prev_cell_right_x= "<<prev_cell_right_x<<endl;
             cout<<"last_cell_name = "<<_cir->module(last_cell_id).name()<<endl;
             cout<<"prev_cell_name = "<<_cir->module(prev_cell_id).name()<<endl;
-            cout<<"Real prev cell x = "<<_prevClus->_x_ref + _prevClus->_delta_x[_prevClus->_cellIdModuleMap.find(prev_cell_id)->second]<<endl;
+            //cout<<"Real prev cell x = "<<_prevClus->_x_ref + _prevClus->_delta_x[_prevClus->_cellIdModuleMap.find(prev_cell_id)->second]<<endl;
             print_delta_x(_lastClus);
             print_delta_x(_prevClus);
-            //assert(false);
+            assert(false);
             //(_cell->name()=="g267993_u0" && _cir->module(last_cell_id).name() == "g267993_u1")
-        }*/
-        assert(last_cell_left_x >= prev_cell_right_x);
+        }//*/
+        //assert(last_cell_left_x >= prev_cell_right_x);
         if(last_cell_left_x-prev_cell_right_x >= _cell->width() && !Is_Interval_Block_Overlap(make_pair(last_cell_left_x-_cell->width(),last_cell_left_x), _rowNum))
         {
             find_deadSpace = true;

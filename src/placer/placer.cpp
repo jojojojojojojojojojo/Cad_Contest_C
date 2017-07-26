@@ -332,6 +332,7 @@ void Placer::print_fanins_fanouts(Cluster* _clus) const
 
 bool Placer::check_all(int to_index) const
 {
+    cout<<"Checking...\n";
     bool noBlockOverlap = true;
     int numOfOverlap = 0;
     int numOfOutOfBound = 0;
@@ -366,7 +367,7 @@ bool Placer::check_all(int to_index) const
     }
     for(unsigned i = 0 ; i < _cir->numRows() ; i++)
     {
-        if(temp_nodes[i].empty()) { continue; }
+        if(temp_nodes[i].empty() || _intervals[i].empty()) { continue; }
         int index = temp_nodes[i].back().first;
         double width = _cir->module(index).width();
         if(temp_nodes[i][0].second < _intervals[i][0].first || temp_nodes[i].back().second+width > _intervals[i].back().second)
@@ -616,6 +617,11 @@ void Placer::legalize()
         if(cost_best == DBL_MAX)
         {
             cout<<"QQ\n";
+            /*
+            cout<<"Module name = "<<_cell->name();
+            cout<<" ; GP x = "<<_modPLPos[0][_cell->dbId()].x();
+            cout<<" ; dead or row = "<<((placeInDeadSpace)?"dead":"row");
+            cout<<" ; valid x = "<<get_valid_pos(_cell,row_best)<<endl;*/
             cin.get();
         }
         //cout<<"cost_best = "<<cost_best<<endl;
@@ -650,6 +656,7 @@ void Placer::legalize_all()
 
     for(unsigned i = 0 ; i < _cir->numFregions() ; i++)
     {
+        //if(i!=4)continue;
         cout<<endl;
         init_fence(i);
         legalize();
@@ -684,7 +691,13 @@ void Placer::AddCell(Cluster* &_clus, Module* _cell, int _rowNum, bool _firstCel
     int rowHeight = (int)(_cell->height()/_cir->rowHeight());
     Node* _newNode = new Node(_cell, rowHeight, _rowNum);
     _newNode->set_x_pos(get_valid_pos(_cell,_rowNum));    
-    assert(_newNode->_x_pos != DBL_MAX);
+    //assert(_newNode->_x_pos != DBL_MAX);
+    if(_newNode->_x_pos == DBL_MAX)
+    {
+        _newNode->set_x_pos(_modPLPos[0][_cell->dbId()].x());
+        cout<<"Warning: placer.cpp line 695 x_pos == DBL_MAX, placement will fail";
+        cin.get();
+    }
 
     _clus->_e += _cell->weight();   //numPins()
 
@@ -1410,50 +1423,58 @@ void Placer::set_x_to_site(Cluster* _clus)
     }
     double rightshift = 0;
     double leftshift  = 0;
-    //*
-    for(unsigned i = 0 ; i < _cir->numRows() ; i++)
+    if(_fence_id == -1)
     {
-        if(_intervals[i].empty()) continue;
-        if( _intervals[i][0].first - leftmosts[i] > rightshift)
+        for(unsigned i = 0 ; i < _cir->numRows() ; i++)
         {
-            rightshift = (_intervals[i][0].first - leftmosts[i]);
-        }
-        if( rightmosts[i] - _intervals[i].back().second > leftshift)
-        { 
-            leftshift = rightmosts[i] - _intervals[i].back().second;
-        }
-    }//*/
-    /*
-    for(unsigned i = 0 ; i < _cir->numRows() ; i++)
-    {
-        //if(_intervals[i].empty()) continue;
-        for(unsigned j = 0 ; j < _intervals[i].size() ; j++)
-        {
-            if(_intervals[i][j].first <= leftmosts[i] && _intervals[i][j].second >= rightmosts[i]) { break; }
-            if(j != 0 && _intervals[i][j-1].second > leftmosts[i]) { break; }
-            if(_intervals[i][j].first - leftmosts[i] > rightshift)
+            if(_intervals[i].empty()) continue;
+            if( _intervals[i][0].first - leftmosts[i] > rightshift)
             {
                 rightshift = (_intervals[i][0].first - leftmosts[i]);
-                break;
             }
-        }  
-        for(int j = (int)_intervals[i].size()-1 ; j >= 0 ; j--)
-        { 
-            if(_intervals[i][j].first <= leftmosts[i] && _intervals[i][j].second >= rightmosts[i]) { break; }
-            if(j != (int)_intervals[i].size()-1 && _intervals[i][j+1].first < rightmosts[i]) { break; }
-            if(rightmosts[i] - _intervals[i][j].second > leftshift)
+            if( rightmosts[i] - _intervals[i].back().second > leftshift)
             { 
                 leftshift = rightmosts[i] - _intervals[i].back().second;
-            } 
+            }
         }
     }
-    
-    if(rightshift != 0 && leftshift != 0) 
+    //*/
+    //*
+    else
     {
-        if(rightshift >= leftshift) { rightshift = 0; }
-        else { leftshift = 0; }
+        for(unsigned i = 0 ; i < _cir->numRows() ; i++)
+        {
+            if(_intervals[i].empty()) continue;
+            for(unsigned j = 0 ; j < _intervals[i].size() ; j++)
+            {
+                if(_intervals[i][j].first <= leftmosts[i] && _intervals[i][j].second >= rightmosts[i]) { break; }
+                if(j != 0 && _intervals[i][j-1].second > leftmosts[i]) { break; }
+                if(_intervals[i][j].first - leftmosts[i] > rightshift)
+                {
+                    rightshift = (_intervals[i][j].first - leftmosts[i]);
+                    break;
+                }
+            }  
+            for(int j = (int)_intervals[i].size()-1 ; j >= 0 ; j--)
+            { 
+                if(_intervals[i][j].first <= leftmosts[i] && _intervals[i][j].second >= rightmosts[i]) { break; }
+                if(j != (int)_intervals[i].size()-1 && _intervals[i][j+1].first < rightmosts[i]) { break; }
+                if(rightmosts[i] - _intervals[i][j].second > leftshift)
+                { 
+                    leftshift = rightmosts[i] - _intervals[i][j].second;
+                    break;
+                } 
+            }
+        }
+        
+        if(rightshift != 0 && leftshift != 0) 
+        {
+            if(rightshift >= leftshift) { rightshift = 0; }
+            else { leftshift = 0; }
+        }
+        assert(rightshift ==0 || leftshift == 0);//*/
     }
-    assert(rightshift ==0 || leftshift == 0);*/
+    
 
     if( rightshift > 0 )
     {

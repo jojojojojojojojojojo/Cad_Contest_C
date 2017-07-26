@@ -238,6 +238,11 @@ void GnuplotPlotter::outputPlotFileFence(string filePathName)
             Rect &rectangle = _rectNRegions[i].first;
             file << format("set object rect from %f,%f to %f,%f fs empty border lc rgb \"%s\"", rectangle.left(), rectangle.bottom(), rectangle.right(), rectangle.top(), _colorStrs[k].c_str()) << endl;
         }
+        for (unsigned i = 0; i < _filled_rects.size(); i++) {
+            if(_filled_rects[i].second != (int)k) { continue; }
+            Rect &rectangle = _filled_rects[i].first;
+            file << format("set object rect from %f,%f to %f,%f fs solid noborder fc rgb \"%s\"", rectangle.left(), rectangle.bottom(), rectangle.right(), rectangle.top(), _colorStrs[k].c_str()) << endl;
+        }
     }
     file << "plot '-' with lines linetype 3" << endl;
     for (unsigned i = 0; i < _rectNRegions.size(); i++) {
@@ -258,9 +263,18 @@ void GnuplotPlotter::outputPlotFileFence(string filePathName)
     file << "pause -1 'Press any key'" << endl;
 }
 
+//set style arrow 1 head nofilled size screen 0.03,15 ls 2 lc rgb "purple"
+//set arrow from 1,10000 rto 100000,100000 as 1
+
 void GnuplotPlotter::addRectangleRegion(const Rect &rectangle, const int &regionIndex)
 {
     _rectNRegions.push_back(make_pair(rectangle,regionIndex));
+    assert(regionIndex < (int)numOfFence);
+}
+
+void GnuplotPlotter::addRectangleFill(const Rect &rectangle, const int &regionIndex)
+{
+    _filled_rects.push_back(make_pair(rectangle,regionIndex));
     assert(regionIndex < (int)numOfFence);
 }
 

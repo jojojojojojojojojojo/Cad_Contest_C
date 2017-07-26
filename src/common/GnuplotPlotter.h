@@ -42,6 +42,7 @@ public:
     //index == -1 if no fence region
     void setNumOfFence(const unsigned& numFence) { numOfFence = numFence; }
     void addRectangleRegion(const Rect &rectangle, const int &regionIndex); 
+    void addRectangleFill(const Rect &rectangle, const int &regionIndex);
     void addRectangle(const Rect &rectangle);
     void clearObjects();
 
@@ -50,6 +51,7 @@ private:
     vector<Rect> _rectangles;
     // rect and fence region
     vector<pair<Rect,int> > _rectNRegions;
+    vector<pair<Rect,int> > _filled_rects;
     unsigned numOfFence;
 
     vector<string> _colorStrs;      //newly add for fence region color

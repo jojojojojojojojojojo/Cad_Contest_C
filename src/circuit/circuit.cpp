@@ -406,7 +406,7 @@ void Circuit::outputGnuplotFigure(string filePathName)
     plotter.outputPlotFile(filePathName);
 }
 
-void Circuit::outputGnuplotFigureFence(string filePathName, bool all, int fence_id)
+void Circuit::outputGnuplotFigureFence(string filePathName, bool all, int fence_id, bool fill)
 {
     GnuplotPlotter plotter;
     plotter.setNumOfFence(numFregions());
@@ -417,7 +417,8 @@ void Circuit::outputGnuplotFigureFence(string filePathName, bool all, int fence_
         for (unsigned i = 0; i < _modules.size(); i++) {
             Module &module = _modules[i];
             int fenceRegionId = (_cellIdRegionMap[module.dbId()] == 0)?-1:_cellIdRegionMap[module.dbId()]->id();
-            plotter.addRectangleRegion(Rect(module.x(),module.y(),module.x()+module.width(),module.y()+module.height()),fenceRegionId);
+            if(fenceRegionId != -1 && fill) { plotter.addRectangleFill(Rect(module.x(),module.y(),module.x()+module.width(),module.y()+module.height()),fenceRegionId); }
+            else { plotter.addRectangleRegion(Rect(module.x(),module.y(),module.x()+module.width(),module.y()+module.height()),fenceRegionId); }
         }
         
         // add rectangle of placement core reigon
@@ -436,7 +437,8 @@ void Circuit::outputGnuplotFigureFence(string filePathName, bool all, int fence_
             Module &module = _modules[i];
             int fenceRegionId = (_cellIdRegionMap[module.dbId()] == 0)?-1:_cellIdRegionMap[module.dbId()]->id();
             if(fenceRegionId != fence_id) continue;
-            plotter.addRectangleRegion(Rect(module.x(),module.y(),module.x()+module.width(),module.y()+module.height()),fenceRegionId);
+            if(fenceRegionId != -1 && fill) { plotter.addRectangleFill(Rect(module.x(),module.y(),module.x()+module.width(),module.y()+module.height()),fenceRegionId); }
+            else { plotter.addRectangleRegion(Rect(module.x(),module.y(),module.x()+module.width(),module.y()+module.height()),fenceRegionId); }
         }
         plotter.addRectangleRegion(_rectangleChip,-1);
         if(fence_id != -1)
