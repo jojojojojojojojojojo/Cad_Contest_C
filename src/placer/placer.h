@@ -156,7 +156,7 @@ public:
     pair<int,int> CheckOverlap_trial_right(Cluster* _clus);
 
     bool Is_Cluster_Block_Overlap(Cluster* _clus,bool output = false) const;
-    bool Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum,bool output = false) const;
+    bool Is_Interval_Block_Overlap(pair<double,double> _interval, int _rowNum,bool output = false) const;
     double find_utilization();
 
     /////////////////////////////////////////////
@@ -175,6 +175,7 @@ public:
     void set_x_to_site_fence(Cluster* _clus);
     */
     void set_intervals();
+    void addBlockedInterval(double lBlk, double rBlk, unsigned rowNum);
     double get_valid_pos(Module* _module, int _rowId);
     void Renew_All_Position();
 
@@ -199,8 +200,9 @@ private:
     vector< vector<int> > prev_cells;       // try to store it in static array to reduce time
     vector< vector<int> > next_cells;       // empty if value == -1
 
-    vector< vector< pair<int,int> > > _intervals;   // for fregions (first index : rows ; second index : intervals)
+    vector< vector< pair<double,double> > > _intervals;   // for fregions (first index : rows ; second index : intervals)
     int _fence_id;                          // fence region id the placer is currently placing
+    double _utilization;                    // density
 
     map<int, Cluster*> _clusters;           // store all clusters
 };

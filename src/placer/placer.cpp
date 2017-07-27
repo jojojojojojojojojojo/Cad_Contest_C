@@ -458,7 +458,7 @@ void Placer::print_intervals() const
     cout<<" ///// Print intervals in each row ///// \n";
     for(unsigned i = 0 ; i < _cir->numRows() ; i++)
     {
-        const vector<pair<int,int> > &interval = _intervals[i];
+        const vector<pair<double,double> > &interval = _intervals[i];
         if(interval.empty()) continue;
         cout<<"\n**************ROW #"<<i<<"**************\n";
         for(unsigned j = 0 ; j < interval.size() ; j++)
@@ -532,7 +532,7 @@ bool Placer::check_cluster_internal_overlap(Cluster* _clus)
 //this area is made just to try some functionalities of the code
 void Placer::legalize()
 {
-    double _alpha = (find_utilization()>0.8)?0.005:0.000; // a function of the "density" of the design (subject to change)
+    double _alpha = (_utilization > 0.8)?0.005:0.000; // a function of the "density" of the design (subject to change)
     cout<<"Number Of modules = "<<_cir->numModules()<<endl;
     //return;
     //cin.get();
@@ -656,9 +656,10 @@ void Placer::legalize_all()
 
     for(unsigned i = 0 ; i < _cir->numFregions() ; i++)
     {
-        //if(i!=4)continue;
+        //if(i!=0)continue;
         cout<<endl;
         init_fence(i);
+        //if(i==0)print_intervals();
         legalize();
         bool region_succeed = check_all(_cir->numModules()-1);
         success = (success)?region_succeed:false;
@@ -1423,7 +1424,7 @@ void Placer::set_x_to_site(Cluster* _clus)
     }
     double rightshift = 0;
     double leftshift  = 0;
-    if(_fence_id == -1)
+    if(_fence_id == -1 )
     {
         for(unsigned i = 0 ; i < _cir->numRows() ; i++)
         {

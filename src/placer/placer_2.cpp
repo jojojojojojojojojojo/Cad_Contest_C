@@ -4,7 +4,7 @@
 #include <algorithm>
 
 //used in sorting intervals
-bool pair_compare(pair<int,int>& _p1, pair<int,int>& _p2)
+bool pair_compare(pair<double,double>& _p1, pair<double,double>& _p2)
 {
     return (_p1.second<_p2.second);
 }
@@ -26,6 +26,7 @@ void Placer::init_fence(int fence_id)
 {
     _fence_id = fence_id;
     set_intervals();
+    _utilization = find_utilization();
 }
 
 double Placer::Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum)
@@ -402,7 +403,7 @@ double Placer::reduce_DeadSpace_trial(Module* _cell, int _rowNum, double _alpha)
     //search the dead space cells by cells from the last cell in _rowNum
     while(!find_deadSpace)
     {
-        ///*
+        /*
         if(last_cell_left_x < prev_cell_right_x)
         {
             cout<<"last_cell_left_x = "<<last_cell_left_x<<endl;
@@ -415,7 +416,7 @@ double Placer::reduce_DeadSpace_trial(Module* _cell, int _rowNum, double _alpha)
             assert(false);
             //(_cell->name()=="g267993_u0" && _cir->module(last_cell_id).name() == "g267993_u1")
         }//*/
-        //assert(last_cell_left_x >= prev_cell_right_x);
+        assert(last_cell_left_x >= prev_cell_right_x);
         if(last_cell_left_x-prev_cell_right_x >= _cell->width() && !Is_Interval_Block_Overlap(make_pair(last_cell_left_x-_cell->width(),last_cell_left_x), _rowNum))
         {
             find_deadSpace = true;
@@ -544,7 +545,7 @@ pair<int,int> Placer::CheckOverlap_trial_right(Cluster* _clus)
 bool Placer::Is_Cluster_Block_Overlap(Cluster* _clus, bool output) const
 {
     //record lowest and highest x position of the cluster in every row 
-    vector< vector<pair<int,int> > > clus_interval;
+    vector< vector<pair<double,double> > > clus_interval;
     clus_interval.resize(_cir->numRows());
 
     for(unsigned i = 0 ; i < _clus->_modules.size() ; i++)
@@ -576,7 +577,7 @@ bool Placer::Is_Cluster_Block_Overlap(Cluster* _clus, bool output) const
 }
 
 //change to interval related
-bool Placer::Is_Interval_Block_Overlap(pair<int,int> _interval, int _rowNum, bool output) const
+bool Placer::Is_Interval_Block_Overlap(pair<double,double> _interval, int _rowNum, bool output) const
 {
     //for(unsigned j = 0 ; j < _cir->row(_rowNum).numInterval() ; j++)
     if(_intervals[_rowNum].empty()){ return true; }
@@ -673,6 +674,8 @@ void Placer::set_intervals()
                 {
                     double right = _fregion->rect(i).right();
                     double left = _fregion->rect(i).left();
+                    right = (right > _cir->chipRect().right())?_cir->chipRect().right():right;
+                    left = (left < _cir->chipRect().left())?_cir->chipRect().left():left;
                     int num = _intervals[rowNum].size();
                     for(int k = 0; k < num; k++)
                     {
@@ -691,11 +694,59 @@ void Placer::set_intervals()
                     _intervals[rowNum].push_back(make_pair(left,right));
                 }                
             }
+            
+            for( size_t i=0; i<_cir->numModules(); ++i )
+            {
+                Module &mod = _cir->module(i);
+                if( mod.width() == 0 || !mod.isFixed() ) { continue; }
+                for( size_t j=0; j<mod.numRects(); ++j ){
+                    Rect rect = mod.rect(j);
+                    size_t lowRowId = _cir->y_2_row_id( rect.bottom() );
+                    size_t topRowId = _cir->y_top_2_row_id( rect.top() );
+
+                    for( size_t k=lowRowId; k<=topRowId; ++k )
+                    {
+                        addBlockedInterval( rect.left(), rect.right(), k);
+                    }
+                }
+            }
         }
         for(unsigned i = 0 ; i < _cir->numRows() ; i++)
         {
             sort(_intervals[i].begin(), _intervals[i].end(), pair_compare);
         }
+    }
+}
+
+void Placer::addBlockedInterval(double lBlk, double rBlk, unsigned rowNum)
+{
+    for( unsigned i=0; i<_intervals[rowNum].size(); ++i ){
+        double &lInt = _intervals[rowNum][i].first, &rInt = _intervals[rowNum][i].second;
+        if( lInt >= rBlk || rInt <= lBlk ) { continue; }
+
+        if( lInt >= lBlk && rInt <= rBlk ){
+            //  ---
+            // BBBBB
+            _intervals[rowNum].erase( vector<pair<double,double> >::iterator( &(_intervals[rowNum][i]) ) );
+            --i;
+        }else if( lInt >= lBlk && rInt > rBlk ){
+            // -----
+            // BBB
+            _intervals[rowNum][i].first = rBlk;
+        }else if( lInt < lBlk && rInt <= rBlk ){
+            // -----
+            //   BBB
+            _intervals[rowNum][i].second = lBlk;
+        }else if( lInt < lBlk && rInt > rBlk ){
+            // -----
+            //  BBB
+            _intervals[rowNum].insert( vector<pair<double,double> >::iterator( &(_intervals[rowNum][i+1]) ), make_pair( rBlk, rInt ) );
+            _intervals[rowNum][i].second = lBlk;
+            ++i;
+        }else{
+            cout << "[ERROR] Row::addBlockedInterval:: site under blockage is not removed..." << endl;
+        }
+
     }
 }
 
@@ -712,7 +763,7 @@ double Placer::get_valid_pos(Module* _cell, int _rowId)
     for(int i = _rowId ; i < _rowId+_rowNum ; i++)
     {
         if(_intervals[i].empty()) { return DBL_MAX; }     //not a valid row to put in
-        vector<pair<int,int> > &_inter = _intervals[i];
+        vector<pair<double,double> > &_inter = _intervals[i];
         for(int j = (int)_inter.size()-1 ; j >= 0  ; j--)
         {
             if(left_cand >= _inter[j].first && left_cand+_cell->width() <= _inter[j].second) { break; }
@@ -726,7 +777,7 @@ double Placer::get_valid_pos(Module* _cell, int _rowId)
     //find right_cand
     for(int i = _rowId ; i < _rowId+_rowNum ; i++)
     {
-        vector<pair<int,int> > &_inter = _intervals[i];
+        vector<pair<double,double> > &_inter = _intervals[i];
         for(unsigned j = 0 ; j < _inter.size() ; j++)
         {
             if(right_cand >= _inter[j].first && right_cand+_cell->width() <= _inter[j].second) { break; }
@@ -742,7 +793,7 @@ double Placer::get_valid_pos(Module* _cell, int _rowId)
     //determine validity
     for(int i = _rowId ; i < _rowId+_rowNum ; i++)
     {
-        vector<pair<int,int> > &_inter = _intervals[i];
+        vector<pair<double,double> > &_inter = _intervals[i];
         if(right_valid)
         {
             for(unsigned j = 0 ; j < _inter.size() ; j++)
