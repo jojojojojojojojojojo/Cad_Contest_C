@@ -179,6 +179,9 @@ public:
     double get_valid_pos(Module* _module, int _rowId);
     void Renew_All_Position();
 
+    bool reduce_DeadSpace_double(Module* _cell, int _rowNum);
+    bool check_interval_second_row(Module* _cell, int _rowNum, pair<int,int> inter);
+
 
     Circuit &cir() {return *_cir;}
 
