@@ -1630,7 +1630,7 @@ bool Placer::check_interval_second_row(Module* _cell, int _rowNum, pair<int,int>
             cout<<"interval of top row = "<<(int)_intervals[_rowNum][0].first<<" ~ "<<last_cell_left_x<<endl;
             cout<<"cell width = "<<_cell->width()<<endl;
             _clus = new Cluster(_fence_id);
-            Node* _newNode = new Node(_cell, 1 , _rowNum-1);
+            Node* _newNode = new Node(_cell, 2 , _rowNum-1);
             _clus->_e += _cell->weight();   //numPins()
 
             //add node to _modules, _cellIdModuleMap
@@ -1685,7 +1685,7 @@ bool Placer::check_interval_second_row(Module* _cell, int _rowNum, pair<int,int>
                 cout<<"cell width = "<<_cell->width()<<endl;
 
                 _clus = new Cluster(_fence_id);
-                Node* _newNode = new Node(_cell, 1 , _rowNum-1);
+                Node* _newNode = new Node(_cell, 2 , _rowNum-1);
                 _clus->_e += _cell->weight();   //numPins()
 
                 //add node to _modules, _cellIdModuleMap
@@ -1744,7 +1744,7 @@ bool Placer::check_interval_second_row(Module* _cell, int _rowNum, pair<int,int>
                 cout<<"cell width = "<<_cell->width()<<endl;
                 
                 _clus = new Cluster(_fence_id);
-                Node* _newNode = new Node(_cell, 1 , _rowNum-1);
+                Node* _newNode = new Node(_cell, 2 , _rowNum-1);
                 _clus->_e += _cell->weight();   //numPins()
 
                 //add node to _modules, _cellIdModuleMap
