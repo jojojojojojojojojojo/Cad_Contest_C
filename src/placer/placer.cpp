@@ -617,28 +617,29 @@ void Placer::legalize()
         if(cost_best == DBL_MAX)
         {
             cout<<"QQ\n";
+            cout<<"rowHeight = "<<rowHeight<<endl;
             /*
             cout<<"Module name = "<<_cell->name();
             cout<<" ; GP x = "<<_modPLPos[0][_cell->dbId()].x();
             cout<<" ; dead or row = "<<((placeInDeadSpace)?"dead":"row");
             cout<<" ; valid x = "<<get_valid_pos(_cell,row_best)<<endl;*/
-            cin.get();
+            //cin.get();
 
             for(int counter = 0 ; counter <= min((int)(_cir->numRows()-rowNum-rowHeight ),rowNum) ; counter++)
             {
                 cout<<"counter = "<<counter<<endl;
-                if(reduce_DeadSpace_double(_cell, rowNum+counter)) {
+                if(check_interval_second_row(_cell, rowNum+counter,rowHeight,1, make_pair(INT_MAX,0))) {
                     cost_best = 0;
                     break;
                 }
-                if(reduce_DeadSpace_double(_cell, rowNum-counter)) {
+                if(check_interval_second_row(_cell, rowNum-counter,rowHeight,1, make_pair(INT_MAX,0))) {
                     cost_best = 0;
                     break;
                 }
             }
             if(cost_best == 0) {
                 cout<<"reduce DeadSpace double success ! \n";
-                cin.get();
+                //cin.get();
                 continue;
             }
             else{
@@ -1511,7 +1512,7 @@ void Placer::set_x_to_site(Cluster* _clus)
     }
 }
 
-bool Placer::reduce_DeadSpace_double(Module* _cell, int _rowNum)
+/*bool Placer::reduce_DeadSpace_double(Module* _cell, int _rowNum)
 {
     cout<<"reduce_DeadSpace_double\n";
     assert(_cell->isStdCell()); //assert is standard cell (module includes preplaced blocks, I/O pins)
@@ -1596,13 +1597,13 @@ bool Placer::reduce_DeadSpace_double(Module* _cell, int _rowNum)
         prev_cell_right_x += _cir->module(prev_cell_id).width();
         
     }
-}
+}*/
 
-bool Placer::check_interval_second_row(Module* _cell, int _rowNum, pair<int,int> inter)
+bool Placer::check_interval_second_row(Module* _cell, int _rowNum, int _degree, int count , pair<int,int> inter)
 {
     cout<<"check_interval_second_row\n";
     assert(_cell->isStdCell()); //assert is standard cell (module includes preplaced blocks, I/O pins)
-    assert((int)(_cell->height()/_cir->rowHeight()) == 2);  //assert single row height
+    //assert((int)(_cell->height()/_cir->rowHeight()) == 2);  //assert single row height
    // bool find_deadSpace = false;
     Cluster* _clus = 0; //use to store cell after finding a space
 
@@ -1621,44 +1622,59 @@ bool Placer::check_interval_second_row(Module* _cell, int _rowNum, pair<int,int>
             int left = max((int)_intervals[_rowNum][0].first,inter.first);
             int right = min(last_cell_left_x,inter.second);
             assert(right >= left);
-            if(right - left < _cell->width()) return false;
-            if(Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum) || Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum-1))
+            if(count == _degree)
             {
-                return false;
+                if(right - left < _cell->width()) return false;
+                for(int i = 0; i < _degree ; i++)
+                {
+                    if(Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum-i)) return false;
+                }
+                cout<<"interval of bottom row = "<<inter.first<<" ~ "<<inter.second<<endl;
+                cout<<"interval of top row = "<<(int)_intervals[_rowNum][0].first<<" ~ "<<last_cell_left_x<<endl;
+                cout<<"cell width = "<<_cell->width()<<endl;
+                _clus = new Cluster(_fence_id);
+                Node* _newNode = new Node(_cell, _degree , _rowNum-_degree+1);
+                _clus->_e += _cell->weight();   //numPins()
+
+                //add node to _modules, _cellIdModuleMap
+                _clus->_modules.push_back(_newNode);
+                _clus->_cellIdModuleMap[_cell->dbId()] = _clus->_modules.size()-1;
+
+                //add cell in a cluster, set ref_x, delata_x, q, prev_cells, next_cells
+                _clus->_ref_module = _newNode;
+                _clus->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
+                _clus->_q += (_cell->weight())*(right-_cell->width());    //q <- q + e*(x'(i)-delta_x(i))
+                //assert on site
+                assert(right-_cell->width() == _cir->g_x_on_site(right-_cell->width(), 0, Circuit::ALIGN_HERE));
+                _newNode->set_x_pos(right-_cell->width());
+            
+                //renew prev cells and next cells
+                prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
+                next_cells[_rowNum][_cell->dbId()] = last_cell_id;
+
+                //re-evaluate position
+                set_x_to_site(_clus);
+
+                // renew _cellIdClusterMap
+                assert(_cellIdClusterMap[_cell->dbId()] == 0);   //assert not exist
+                _cellIdClusterMap[_cell->dbId()] = _clus;
+
+                _clusters[_clus->id] = _clus;
+                _clus->_cost = RenewCost(*_clus);
+                return true;
             }
-            cout<<"interval of bottom row = "<<inter.first<<" ~ "<<inter.second<<endl;
-            cout<<"interval of top row = "<<(int)_intervals[_rowNum][0].first<<" ~ "<<last_cell_left_x<<endl;
-            cout<<"cell width = "<<_cell->width()<<endl;
-            _clus = new Cluster(_fence_id);
-            Node* _newNode = new Node(_cell, 2 , _rowNum-1);
-            _clus->_e += _cell->weight();   //numPins()
-
-            //add node to _modules, _cellIdModuleMap
-            _clus->_modules.push_back(_newNode);
-            _clus->_cellIdModuleMap[_cell->dbId()] = _clus->_modules.size()-1;
-
-            //add cell in a cluster, set ref_x, delata_x, q, prev_cells, next_cells
-            _clus->_ref_module = _newNode;
-            _clus->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
-            _clus->_q += (_cell->weight())*(right-_cell->width());    //q <- q + e*(x'(i)-delta_x(i))
-            //assert on site
-            assert(right-_cell->width() == _cir->g_x_on_site(right-_cell->width(), 0, Circuit::ALIGN_HERE));
-            _newNode->set_x_pos(right-_cell->width());
-
-            //renew prev cells and next cells
-            prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
-            next_cells[_rowNum][_cell->dbId()] = last_cell_id;
-
-            //re-evaluate position
-            set_x_to_site(_clus);
-
-            // renew _cellIdClusterMap
-            assert(_cellIdClusterMap[_cell->dbId()] == 0);   //assert not exist
-            _cellIdClusterMap[_cell->dbId()] = _clus;
-
-            _clusters[_clus->id] = _clus;
-            _clus->_cost = RenewCost(*_clus);
-            return true;
+            else
+            {
+                if(check_interval_second_row(_cell, _rowNum+1, _degree, count+1 , make_pair(left,right)))
+                {
+                    cout<<"1\n";
+                    //renew prev cells and next cells
+                    prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
+                    next_cells[_rowNum][_cell->dbId()] = last_cell_id;
+                    return true;
+                }
+                else return false;
+            }
         }
         else { return false; }
     }
@@ -1673,54 +1689,78 @@ bool Placer::check_interval_second_row(Module* _cell, int _rowNum, pair<int,int>
     while(1)
     {
         assert(last_cell_left_x >= prev_cell_right_x);
-        if(last_cell_left_x <= inter.first) return false;
-        if(prev_cell_right_x < inter.second)
+        if(last_cell_left_x - prev_cell_right_x >= _cell->width())
         {
-            int left = max(prev_cell_right_x,inter.first);
-            int right = min(last_cell_left_x,inter.second);
-            if(right - left >= _cell->width() && !Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum) && !Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum-1))
+            if(count == _degree)
             {
-                cout<<"interval of bottom row = "<<inter.first<<" ~ "<<inter.second<<endl;
-                cout<<"interval of top row = "<<prev_cell_right_x<<" ~ "<<last_cell_left_x<<endl;
-                cout<<"cell width = "<<_cell->width()<<endl;
+                if(last_cell_left_x <= inter.first) return false;
+                if(prev_cell_right_x < inter.second)
+                {
+                    int left = max(prev_cell_right_x,inter.first);
+                    int right = min(last_cell_left_x,inter.second);
+                    bool overlap = false;
+                    for(int i = 0; i < _degree ; i++)
+                    {
+                        if(Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum-i)) overlap = true;
+                    }
+                    if(right - left >= _cell->width() && !overlap)
+                    {
+                        cout<<"interval of bottom row = "<<inter.first<<" ~ "<<inter.second<<endl;
+                        cout<<"interval of top row = "<<prev_cell_right_x<<" ~ "<<last_cell_left_x<<endl;
+                        cout<<"cell width = "<<_cell->width()<<endl;
 
-                _clus = new Cluster(_fence_id);
-                Node* _newNode = new Node(_cell, 2 , _rowNum-1);
-                _clus->_e += _cell->weight();   //numPins()
+                        _clus = new Cluster(_fence_id);
+                        Node* _newNode = new Node(_cell, _degree , _rowNum-_degree+1);
+                        _clus->_e += _cell->weight();   //numPins()
 
-                //add node to _modules, _cellIdModuleMap
-                _clus->_modules.push_back(_newNode);
-                _clus->_cellIdModuleMap[_cell->dbId()] = _clus->_modules.size()-1;
+                        //add node to _modules, _cellIdModuleMap
+                        _clus->_modules.push_back(_newNode);
+                        _clus->_cellIdModuleMap[_cell->dbId()] = _clus->_modules.size()-1;
 
-                //add cell in a cluster, set ref_x, delata_x, q, prev_cells, next_cells
-                _clus->_ref_module = _newNode;
-                _clus->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
-                _clus->_q += (_cell->weight())*(right-_cell->width());    //q <- q + e*(x'(i)-delta_x(i))
-                //assert on site
-                assert(right-_cell->width() == _cir->g_x_on_site(right-_cell->width(), 0, Circuit::ALIGN_HERE));
-                _newNode->set_x_pos(right-_cell->width());
+                        //add cell in a cluster, set ref_x, delata_x, q, prev_cells, next_cells
+                        _clus->_ref_module = _newNode;
+                        _clus->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
+                        _clus->_q += (_cell->weight())*(right-_cell->width());    //q <- q + e*(x'(i)-delta_x(i))
+                        //assert on site
+                        assert(right-_cell->width() == _cir->g_x_on_site(right-_cell->width(), 0, Circuit::ALIGN_HERE));
+                        _newNode->set_x_pos(right-_cell->width());
 
-                //renew prev cells and next cells
-                prev_cells[_rowNum][_cell->dbId()] = prev_cell_id;
-                next_cells[_rowNum][prev_cell_id]  = _cell->dbId();
+                        //renew prev cells and next cells
+                        prev_cells[_rowNum][_cell->dbId()] = prev_cell_id;
+                        next_cells[_rowNum][prev_cell_id]  = _cell->dbId();
 
-                prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
-                next_cells[_rowNum][_cell->dbId()] = last_cell_id;
+                        prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
+                        next_cells[_rowNum][_cell->dbId()] = last_cell_id;
 
-                //re-evaluate position
-                set_x_to_site(_clus);
+                        //re-evaluate position
+                        set_x_to_site(_clus);
 
-                // renew _cellIdClusterMap
-                assert(_cellIdClusterMap[_cell->dbId()] == 0);   //assert not exist
-                _cellIdClusterMap[_cell->dbId()] = _clus;
+                        // renew _cellIdClusterMap
+                        assert(_cellIdClusterMap[_cell->dbId()] == 0);   //assert not exist
+                        _cellIdClusterMap[_cell->dbId()] = _clus;
 
-                _clusters[_clus->id] = _clus;
-                _clus->_cost = RenewCost(*_clus);
+                        _clusters[_clus->id] = _clus;
+                        _clus->_cost = RenewCost(*_clus);
 
-                return true;
+                        return true;
+                    }
+                }
+            }
+            else
+            {
+                if(check_interval_second_row(_cell, _rowNum+1, _degree, count+1 ,make_pair(prev_cell_right_x,last_cell_left_x)))
+                {
+                    cout<<"2\n";
+                    //renew prev cells and next cells
+                    prev_cells[_rowNum][_cell->dbId()] = prev_cell_id;
+                    next_cells[_rowNum][prev_cell_id]  = _cell->dbId();
+
+                    prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
+                    next_cells[_rowNum][_cell->dbId()] = last_cell_id;
+                    return true;
+                }
             }
         }
-
         _lastClus = _prevClus;
         last_cell_id = prev_cell_id;
         last_cell_left_x = prev_cell_right_x - _cir->module(prev_cell_id).width();
@@ -1728,53 +1768,72 @@ bool Placer::check_interval_second_row(Module* _cell, int _rowNum, pair<int,int>
         prev_cell_id = prev_cells[_rowNum][last_cell_id];
         if( prev_cell_id == -1) 
         { 
-            if(last_cell_left_x <= inter.first) return false;
             if(last_cell_left_x >= _cell->width())
             {
-                int left = max((int)_intervals[_rowNum][0].first,inter.first);
-                int right = min(last_cell_left_x,inter.second);
-                assert(right >= left);
-                if(right - left < _cell->width()) return false;
-                if(Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum) || Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum-1))
+                if(count == _degree)
                 {
-                    return false;
+                    if(last_cell_left_x <= inter.first) return false;
+                    if(last_cell_left_x >= _cell->width())
+                    {
+                        int left = max((int)_intervals[_rowNum][0].first,inter.first);
+                        int right = min(last_cell_left_x,inter.second);
+                        assert(right >= left);
+                        if(right - left < _cell->width()) return false;
+                        for(int i = 0; i < _degree ; i++)
+                        {
+                            if(Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum-i)) return false;
+                        }
+                        cout<<"interval of bottom row = "<<inter.first<<" ~ "<<inter.second<<endl;
+                        cout<<"interval of top row = "<<(int)_intervals[_rowNum][0].first<<" ~ "<<last_cell_left_x<<endl;
+                        cout<<"cell width = "<<_cell->width()<<endl;
+                        
+                        _clus = new Cluster(_fence_id);
+                        Node* _newNode = new Node(_cell, _degree , _rowNum-_degree+1);
+                        _clus->_e += _cell->weight();   //numPins()
+
+                        //add node to _modules, _cellIdModuleMap
+                        _clus->_modules.push_back(_newNode);
+                        _clus->_cellIdModuleMap[_cell->dbId()] = _clus->_modules.size()-1;
+
+                        //add cell in a cluster, set ref_x, delata_x, q, prev_cells, next_cells
+                        _clus->_ref_module = _newNode;
+                        _clus->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
+                        _clus->_q += (_cell->weight())*(right-_cell->width());    //q <- q + e*(x'(i)-delta_x(i))
+                        //assert on site
+                        assert(right-_cell->width() == _cir->g_x_on_site(right-_cell->width(), 0, Circuit::ALIGN_HERE));
+                        _newNode->set_x_pos(right-_cell->width());
+
+                        //renew prev cells and next cells
+                        prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
+                        next_cells[_rowNum][_cell->dbId()] = last_cell_id;
+
+                        //re-evaluate position
+                        set_x_to_site(_clus);
+
+                        // renew _cellIdClusterMap
+                        assert(_cellIdClusterMap[_cell->dbId()] == 0);   //assert not exist
+                        _cellIdClusterMap[_cell->dbId()] = _clus;
+
+                        _clusters[_clus->id] = _clus;
+                        _clus->_cost = RenewCost(*_clus);
+                        return true;
+                    }
+                    else { return false; }
                 }
-                cout<<"interval of bottom row = "<<inter.first<<" ~ "<<inter.second<<endl;
-                cout<<"interval of top row = "<<(int)_intervals[_rowNum][0].first<<" ~ "<<last_cell_left_x<<endl;
-                cout<<"cell width = "<<_cell->width()<<endl;
-                
-                _clus = new Cluster(_fence_id);
-                Node* _newNode = new Node(_cell, 2 , _rowNum-1);
-                _clus->_e += _cell->weight();   //numPins()
-
-                //add node to _modules, _cellIdModuleMap
-                _clus->_modules.push_back(_newNode);
-                _clus->_cellIdModuleMap[_cell->dbId()] = _clus->_modules.size()-1;
-
-                //add cell in a cluster, set ref_x, delata_x, q, prev_cells, next_cells
-                _clus->_ref_module = _newNode;
-                _clus->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
-                _clus->_q += (_cell->weight())*(right-_cell->width());    //q <- q + e*(x'(i)-delta_x(i))
-                //assert on site
-                assert(right-_cell->width() == _cir->g_x_on_site(right-_cell->width(), 0, Circuit::ALIGN_HERE));
-                _newNode->set_x_pos(right-_cell->width());
-
-                //renew prev cells and next cells
-                prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
-                next_cells[_rowNum][_cell->dbId()] = last_cell_id;
-
-                //re-evaluate position
-                set_x_to_site(_clus);
-
-                // renew _cellIdClusterMap
-                assert(_cellIdClusterMap[_cell->dbId()] == 0);   //assert not exist
-                _cellIdClusterMap[_cell->dbId()] = _clus;
-
-                _clusters[_clus->id] = _clus;
-                _clus->_cost = RenewCost(*_clus);
-                return true;
+                else
+                {
+                    if(check_interval_second_row(_cell, _rowNum+1, _degree, count+1, make_pair(_intervals[_rowNum][0].first,last_cell_left_x)))
+                    {
+                        cout<<"3\n";
+                        //renew prev cells and next cells
+                        prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
+                        next_cells[_rowNum][_cell->dbId()] = last_cell_id;
+                        return true;
+                    }
+                    else return false;
+                }
             }
-            else { return false; }
+            else return false;
         }
         _prevClus = _cellIdClusterMap[prev_cell_id];
         prev_cell_right_x= _prevClus->_x_ref + _prevClus->_delta_x[_prevClus->_cellIdModuleMap.find(prev_cell_id)->second];
