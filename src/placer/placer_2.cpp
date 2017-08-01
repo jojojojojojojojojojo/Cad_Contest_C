@@ -835,3 +835,139 @@ void Placer::Renew_All_Position()
 
     cout<<"Cluster number = "<<_clusters.size()<<endl;
 }
+
+bool Placer::check_interval_second_row_trial(Module* _cell, int _rowNum, int _degree, int count , pair<int,int> inter, double& cost, double _alpha)
+{
+    /*cout<<"check_interval_second_row_trial\n";
+    cout<<"degree = "<<_degree<<endl;
+    cout<<"count = "<<count<<endl;*/
+    if(_intervals[_rowNum].size() == 0) return false;
+    if(count > _degree) return false;
+    assert(_cell->isStdCell()); //assert is standard cell (module includes preplaced blocks, I/O pins)
+    //assert((int)(_cell->height()/_cir->rowHeight()) == 2);  //assert single row height
+   // bool find_deadSpace = false;
+    Cluster* _clus = 0; //use to store cell after finding a space
+
+    //find last cell in row
+    if(_rowIdClusterMap[_rowNum] == 0) { return false; }
+    Cluster* _lastClus = _rowIdClusterMap[_rowNum];
+    int last_cell_id = _lastClus->_modules[(_lastClus->_lastNode.find(_rowNum))->second]->_module->dbId();
+    int last_cell_left_x = _lastClus->_x_ref + _lastClus->_delta_x[_lastClus->_cellIdModuleMap.find(last_cell_id)->second];
+
+    //find prev cell of last cell
+    int prev_cell_id = prev_cells[_rowNum][last_cell_id];
+    if( prev_cell_id == -1) 
+    { 
+        if(last_cell_left_x <= inter.first) return false;
+        if(last_cell_left_x >= _cell->width())
+        {
+            int left = max((int)_intervals[_rowNum][0].first,inter.first);
+            int right = min(last_cell_left_x,inter.second);
+            assert(right >= left);
+            if(right - left < _cell->width()) return false;
+            if(count == _degree)
+            {
+                for(int i = 0; i < _degree ; i++)
+                {
+                    if(Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum-i)) return false;
+                }
+                cost = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum-_degree+1))+abs(_modPLPos[0][_cell->dbId()].x()-(right-_cell->width()));
+                cost -= _alpha * (_cell->width()*_cell->height());
+                return true;
+            }
+            else
+            {
+                if(check_interval_second_row_trial(_cell, _rowNum+1, _degree, count+1 , make_pair(left,right),cost,_alpha))
+                {
+                    return true;
+                }
+                else return false;
+            }
+        }
+        else { return false; }
+    }
+
+    Cluster* _prevClus = _cellIdClusterMap[prev_cell_id];
+
+    //find their respective position
+    int prev_cell_right_x= _prevClus->_x_ref + _prevClus->_delta_x[_prevClus->_cellIdModuleMap.find(prev_cell_id)->second];
+    prev_cell_right_x += _cir->module(prev_cell_id).width();
+
+    //search the dead space cells by cells starting from the last cell in _rowNum
+    while(1)
+    {
+        assert(last_cell_left_x >= prev_cell_right_x);
+        if(last_cell_left_x <= inter.first) return false;
+        if(prev_cell_right_x < inter.second)
+        {
+            if(last_cell_left_x - prev_cell_right_x >= _cell->width())
+            {
+                int left = max(prev_cell_right_x,inter.first);
+                int right = min(last_cell_left_x,inter.second);
+                if(count == _degree)
+                {
+                    bool overlap = false;
+                    for(int i = 0; i < _degree ; i++)
+                    {
+                        if(Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum-i)) overlap = true;
+                    }
+                    if(right - left >= _cell->width() && !overlap)
+                    {
+                        cost = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum-_degree+1))+abs(_modPLPos[0][_cell->dbId()].x()-(right-_cell->width()));
+                        cost -= _alpha * (_cell->width()*_cell->height());
+                        return true;
+                    } 
+                }
+                else
+                {
+                    if(check_interval_second_row_trial(_cell, _rowNum+1, _degree, count+1 ,make_pair(left,right),cost,_alpha))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        _lastClus = _prevClus;
+        last_cell_id = prev_cell_id;
+        last_cell_left_x = prev_cell_right_x - _cir->module(prev_cell_id).width();
+
+        prev_cell_id = prev_cells[_rowNum][last_cell_id];
+        if( prev_cell_id == -1) 
+        { 
+            if(last_cell_left_x <= inter.first) return false;
+            if(last_cell_left_x >= _cell->width())
+            {
+                int left = max((int)_intervals[_rowNum][0].first,inter.first);
+                int right = min(last_cell_left_x,inter.second);
+                if(right - left < _cell->width()) return false;
+                if(count == _degree)
+                {
+                    if(last_cell_left_x >= _cell->width())
+                    {
+                        assert(right >= left);
+                        for(int i = 0; i < _degree ; i++)
+                        {
+                            if(Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum-i)) return false;
+                        }
+                        cost = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum-_degree+1))+abs(_modPLPos[0][_cell->dbId()].x()-(right-_cell->width()));
+                        cost -= _alpha * (_cell->width()*_cell->height());
+                        return true;
+                    }
+                    else { return false; }
+                }
+                else
+                {
+                    if(check_interval_second_row_trial(_cell, _rowNum+1, _degree, count+1, make_pair(left,right),cost,_alpha))
+                    {
+                        return true;
+                    }
+                    else return false;
+                }
+            }
+            else return false;
+        }
+        _prevClus = _cellIdClusterMap[prev_cell_id];
+        prev_cell_right_x= _prevClus->_x_ref + _prevClus->_delta_x[_prevClus->_cellIdModuleMap.find(prev_cell_id)->second];
+        prev_cell_right_x += _cir->module(prev_cell_id).width();
+    }
+}

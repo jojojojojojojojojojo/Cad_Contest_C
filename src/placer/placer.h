@@ -181,7 +181,7 @@ public:
 
     //bool reduce_DeadSpace_double(Module* _cell, int _rowNum);
     bool check_interval_second_row(Module* _cell, int _rowNum, int _degree, int count, pair<int,int> inter);
-
+    bool check_interval_second_row_trial(Module* _cell, int _rowNum, int _degree, int count , pair<int,int> inter, double& cost, double _alpha);
 
     Circuit &cir() {return *_cir;}
 

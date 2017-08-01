@@ -534,6 +534,7 @@ void Placer::legalize()
 {
     double _alpha = (_utilization > 0.8)?0.005:0.000; // a function of the "density" of the design (subject to change)
     cout<<"Number Of modules = "<<_cir->numModules()<<endl;
+    cout<<"_alpha = "<<_alpha<<endl;
     //return;
     //cin.get();
     for(unsigned i = 0 ; i < _cir->numModules() ; i++)
@@ -550,6 +551,7 @@ void Placer::legalize()
         double cost_best = DBL_MAX;
         int row_best = rowNum;
         bool placeInDeadSpace = false;
+        bool placeInDeadSpaceMulti = false;
 
         
         //cout<<"Module x_pox = "<<_modPLPos[0][_cell->dbId()].x()<<" ; Row #"<<rowNum;
@@ -574,6 +576,7 @@ void Placer::legalize()
                 cost_best = cost;
                 row_best = rowNum+counter;
                 placeInDeadSpace = false;
+                placeInDeadSpaceMulti = false;
             }
             
             if(rowHeight == 1)     //try placing in dead space
@@ -582,7 +585,20 @@ void Placer::legalize()
                 if(cost < cost_best){
                     cost_best = cost;
                     row_best = rowNum+counter;
+                    placeInDeadSpaceMulti = false;
                     placeInDeadSpace = true;
+                }
+            }
+            else
+            {
+                if(check_interval_second_row_trial(_cell,rowNum+counter,rowHeight,1,make_pair(0,INT_MAX),cost,_alpha))
+                {
+                    if(cost < ml_cost_best){
+                        cost_best = cost;
+                        row_best = rowNum+counter;
+                        placeInDeadSpace = false;
+                        placeInDeadSpaceMulti = true;
+                    }
                 }
             }
         }
@@ -602,6 +618,7 @@ void Placer::legalize()
                 cost_best = cost;
                 row_best = rowNum-counter;
                 placeInDeadSpace = false;
+                placeInDeadSpaceMulti = false;
             }
             
             if(rowHeight == 1)     //try placing in dead space
@@ -611,6 +628,19 @@ void Placer::legalize()
                     cost_best = cost;
                     row_best = rowNum-counter;
                     placeInDeadSpace = true;
+                    placeInDeadSpaceMulti = false;
+                }
+            }
+            else
+            {
+                if(check_interval_second_row_trial(_cell,rowNum-counter,rowHeight,1,make_pair(0,INT_MAX),cost,_alpha))
+                {
+                    if(cost < cost_best){
+                        cost_best = cost;
+                        row_best = rowNum-counter;
+                        placeInDeadSpace = false;
+                        placeInDeadSpaceMulti = true;
+                    }
                 }
             }
         }
@@ -618,14 +648,15 @@ void Placer::legalize()
         {
             cout<<"QQ\n";
             cout<<"rowHeight = "<<rowHeight<<endl;
+            cout<<"cell number = "<<i<<endl;
             /*
             cout<<"Module name = "<<_cell->name();
             cout<<" ; GP x = "<<_modPLPos[0][_cell->dbId()].x();
             cout<<" ; dead or row = "<<((placeInDeadSpace)?"dead":"row");
             cout<<" ; valid x = "<<get_valid_pos(_cell,row_best)<<endl;*/
-            //cin.get();
+            cin.get();
 
-            for(int counter = 0 ; counter <= min((int)(_cir->numRows()-rowNum-rowHeight ),rowNum) ; counter++)
+            /*for(int counter = 0 ; counter <= min((int)(_cir->numRows()-rowNum-rowHeight ),rowNum) ; counter++)
             {
                 cout<<"counter = "<<counter<<endl;
                 if(check_interval_second_row(_cell, rowNum+counter,rowHeight,1, make_pair(INT_MAX,0))) {
@@ -645,19 +676,23 @@ void Placer::legalize()
             else{
                 cout<<"still QQ\n";
                 cin.get();
-            }
+            }*/
         }
         //cout<<"cost_best = "<<cost_best<<endl;
         //cout<<"Place In row = "<<row_best<<endl;
         //cout<<"Place again, cost = "<<Multi_PlaceRow_trial(_cell,rowHeight,row_best)<<endl;
         //cout<<"Done!"<<endl;
-        if( !placeInDeadSpace)
+        if( placeInDeadSpace)
         {
-            Multi_PlaceRow(_cell,rowHeight,row_best);
+            assert(reduce_DeadSpace(_cell,row_best));   
+        }
+        else if(placeInDeadSpaceMulti)
+        {
+            assert(check_interval_second_row(_cell, row_best,rowHeight,1, make_pair(0,INT_MAX)));
         }
         else
         {
-            assert(reduce_DeadSpace(_cell,row_best));
+            Multi_PlaceRow(_cell,rowHeight,row_best);
         }
     }
     //assert(check_all(_cir->numModules()-1));
@@ -1601,7 +1636,7 @@ void Placer::set_x_to_site(Cluster* _clus)
 
 bool Placer::check_interval_second_row(Module* _cell, int _rowNum, int _degree, int count , pair<int,int> inter)
 {
-    cout<<"check_interval_second_row\n";
+    //cout<<"check_interval_second_row\n";
     assert(_cell->isStdCell()); //assert is standard cell (module includes preplaced blocks, I/O pins)
     //assert((int)(_cell->height()/_cir->rowHeight()) == 2);  //assert single row height
    // bool find_deadSpace = false;
@@ -1629,9 +1664,9 @@ bool Placer::check_interval_second_row(Module* _cell, int _rowNum, int _degree, 
                 {
                     if(Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum-i)) return false;
                 }
-                cout<<"interval of bottom row = "<<inter.first<<" ~ "<<inter.second<<endl;
+                /*cout<<"interval of bottom row = "<<inter.first<<" ~ "<<inter.second<<endl;
                 cout<<"interval of top row = "<<(int)_intervals[_rowNum][0].first<<" ~ "<<last_cell_left_x<<endl;
-                cout<<"cell width = "<<_cell->width()<<endl;
+                cout<<"cell width = "<<_cell->width()<<endl;*/
                 _clus = new Cluster(_fence_id);
                 Node* _newNode = new Node(_cell, _degree , _rowNum-_degree+1);
                 _clus->_e += _cell->weight();   //numPins()
@@ -1667,7 +1702,6 @@ bool Placer::check_interval_second_row(Module* _cell, int _rowNum, int _degree, 
             {
                 if(check_interval_second_row(_cell, _rowNum+1, _degree, count+1 , make_pair(left,right)))
                 {
-                    cout<<"1\n";
                     //renew prev cells and next cells
                     prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
                     next_cells[_rowNum][_cell->dbId()] = last_cell_id;
@@ -1705,9 +1739,9 @@ bool Placer::check_interval_second_row(Module* _cell, int _rowNum, int _degree, 
                     }
                     if(right - left >= _cell->width() && !overlap)
                     {
-                        cout<<"interval of bottom row = "<<inter.first<<" ~ "<<inter.second<<endl;
+                        /*cout<<"interval of bottom row = "<<inter.first<<" ~ "<<inter.second<<endl;
                         cout<<"interval of top row = "<<prev_cell_right_x<<" ~ "<<last_cell_left_x<<endl;
-                        cout<<"cell width = "<<_cell->width()<<endl;
+                        cout<<"cell width = "<<_cell->width()<<endl;*/
 
                         _clus = new Cluster(_fence_id);
                         Node* _newNode = new Node(_cell, _degree , _rowNum-_degree+1);
@@ -1750,7 +1784,6 @@ bool Placer::check_interval_second_row(Module* _cell, int _rowNum, int _degree, 
             {
                 if(check_interval_second_row(_cell, _rowNum+1, _degree, count+1 ,make_pair(prev_cell_right_x,last_cell_left_x)))
                 {
-                    cout<<"2\n";
                     //renew prev cells and next cells
                     prev_cells[_rowNum][_cell->dbId()] = prev_cell_id;
                     next_cells[_rowNum][prev_cell_id]  = _cell->dbId();
@@ -1783,9 +1816,9 @@ bool Placer::check_interval_second_row(Module* _cell, int _rowNum, int _degree, 
                         {
                             if(Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum-i)) return false;
                         }
-                        cout<<"interval of bottom row = "<<inter.first<<" ~ "<<inter.second<<endl;
+                        /*cout<<"interval of bottom row = "<<inter.first<<" ~ "<<inter.second<<endl;
                         cout<<"interval of top row = "<<(int)_intervals[_rowNum][0].first<<" ~ "<<last_cell_left_x<<endl;
-                        cout<<"cell width = "<<_cell->width()<<endl;
+                        cout<<"cell width = "<<_cell->width()<<endl;*/
                         
                         _clus = new Cluster(_fence_id);
                         Node* _newNode = new Node(_cell, _degree , _rowNum-_degree+1);
@@ -1824,7 +1857,6 @@ bool Placer::check_interval_second_row(Module* _cell, int _rowNum, int _degree, 
                 {
                     if(check_interval_second_row(_cell, _rowNum+1, _degree, count+1, make_pair(_intervals[_rowNum][0].first,last_cell_left_x)))
                     {
-                        cout<<"3\n";
                         //renew prev cells and next cells
                         prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
                         next_cells[_rowNum][_cell->dbId()] = last_cell_id;
