@@ -9,6 +9,11 @@ bool pair_compare(pair<double,double>& _p1, pair<double,double>& _p2)
     return (_p1.second<_p2.second);
 }
 
+bool pair_compare_2(pair<int,int>& _p1, pair<int,int>& _p2)
+{
+    return (_p1.first<_p2.first);
+}
+
 void Placer::clear()
 {
     fill(_rowIdClusterMap.begin(),_rowIdClusterMap.end(),(Cluster*)(0));
@@ -970,4 +975,74 @@ bool Placer::check_interval_second_row_trial(Module* _cell, int _rowNum, int _de
         prev_cell_right_x= _prevClus->_x_ref + _prevClus->_delta_x[_prevClus->_cellIdModuleMap.find(prev_cell_id)->second];
         prev_cell_right_x += _cir->module(prev_cell_id).width();
     }
+}
+
+double Placer::reduce_DeadSpace_Multi_trial(Module* _cell, int _rowNum, int _degree, double _alpha, double& cost)
+{
+    cost = DBL_MAX;
+    vector< pair<int,int> > block_intervals;
+    int rightbound = INT_MAX;
+    for(int i = 0; i < _degree; i++)
+    {
+        if(_intervals[_rowNum+i].size() == 0) return DBL_MAX;
+        if(_rowIdClusterMap[_rowNum+i] == 0) return DBL_MAX;
+        block_intervals.push_back(make_pair(0,_intervals[_rowNum+i][0].first));
+        if(_intervals[_rowNum+i].size() >= 2)
+        {
+            for(unsigned j = 0; j<_intervals[_rowNum+i].size()-1; j++) 
+                block_intervals.push_back(make_pair(_intervals[_rowNum+i][j].second,_intervals[_rowNum+i][j+1].first));
+        } 
+        
+        Cluster* _lastClus = _rowIdClusterMap[_rowNum+i];
+        int last_cell_id = _lastClus->_modules[(_lastClus->_lastNode.find(_rowNum+i))->second]->_module->dbId();
+        int last_cell_left_x = _lastClus->_x_ref + _lastClus->_delta_x[_lastClus->_cellIdModuleMap.find(last_cell_id)->second];
+        block_intervals.push_back(make_pair(last_cell_left_x,last_cell_left_x+_cir->module(last_cell_id).width()));
+        if(last_cell_left_x+_cir->module(last_cell_id).width() < rightbound) rightbound = last_cell_left_x+_cir->module(last_cell_id).width();
+
+        while(1)
+        {
+            //find prev cell of last cell
+            last_cell_id = prev_cells[_rowNum+i][last_cell_id];
+            if(last_cell_id == -1) break;
+            _lastClus = _cellIdClusterMap[last_cell_id];
+            last_cell_left_x = _lastClus->_x_ref + _lastClus->_delta_x[_lastClus->_cellIdModuleMap.find(last_cell_id)->second];
+            block_intervals.push_back(make_pair(last_cell_left_x,last_cell_left_x+_cir->module(last_cell_id).width()));
+        }
+    }
+    sort(block_intervals.begin(),block_intervals.end(),pair_compare_2);
+    
+    int right = block_intervals[0].second;
+    double x_best = DBL_MAX;
+    /*cout<<"rowNum = "<<_rowNum<<endl;
+    cout<<"rightbound = "<<rightbound<<endl;
+    cout<<"block_intervals[0].first = "<<block_intervals[0].first<<endl;
+    cout<<"block_intervals[0].second = "<<block_intervals[0].second<<endl;*/
+    for(unsigned i = 1; i < block_intervals.size(); i++)
+    {
+        /*cout<<"block_intervals["<<i<<"].first = "<<block_intervals[i].first<<endl;
+        cout<<"block_intervals["<<i<<"].second = "<<block_intervals[i].second<<endl;*/
+        if(block_intervals[i].second > rightbound) continue;
+        if(block_intervals[i].first <= right)
+        {
+            if(block_intervals[i].second > right) right = block_intervals[i].second;
+        }
+        else
+        {
+            if(block_intervals[i].first - right >= _cell->width())
+            {
+                //cout<<"block_intervals[i].first = "<<block_intervals[i].first<<endl;
+                //cout<<"right = "<<right<<endl;
+                //cout<<"_cell->width() = "<<_cell->width()<<endl;
+                //cout<<"_rowNum = "<<_rowNum<<endl;
+                double temp = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum))+abs(_modPLPos[0][_cell->dbId()].x()-(block_intervals[i].first-_cell->width()));
+                temp -= _alpha * (_cell->width()*_cell->height());
+                if(temp < cost) {
+                    cost = temp;
+                    x_best = block_intervals[i].first-_cell->width();
+                }
+            }
+            right = block_intervals[i].second;
+        }
+    }
+    return x_best;
 }

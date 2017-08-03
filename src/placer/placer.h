@@ -183,6 +183,10 @@ public:
     bool check_interval_second_row(Module* _cell, int _rowNum, int _degree, int count, pair<int,int> inter);
     bool check_interval_second_row_trial(Module* _cell, int _rowNum, int _degree, int count , pair<int,int> inter, double& cost, double _alpha);
 
+    double reduce_DeadSpace_Multi_trial(Module* _cell, int _rowNum, int _degree, double _alpha, double& cost);
+    bool reduce_DeadSpace_Multi(Module* _cell, int _rowNum, int _degree, int count, int _x);
+
+
     Circuit &cir() {return *_cir;}
 
 private:

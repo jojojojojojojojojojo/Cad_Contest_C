@@ -550,6 +550,7 @@ void Placer::legalize()
         int rowNum = _cir->y_2_row_id(_cell->y());
         double cost_best = DBL_MAX;
         int row_best = rowNum;
+        double x_best = DBL_MAX;
         bool placeInDeadSpace = false;
         bool placeInDeadSpaceMulti = false;
 
@@ -591,14 +592,13 @@ void Placer::legalize()
             }
             else
             {
-                if(check_interval_second_row_trial(_cell,rowNum+counter,rowHeight,1,make_pair(0,INT_MAX),cost,_alpha))
-                {
-                    if(cost < ml_cost_best){
-                        cost_best = cost;
-                        row_best = rowNum+counter;
-                        placeInDeadSpace = false;
-                        placeInDeadSpaceMulti = true;
-                    }
+                double x_multi = reduce_DeadSpace_Multi_trial(_cell, rowNum+counter, rowHeight, _alpha,cost);
+                if(cost < cost_best){
+                    cost_best = cost;
+                    row_best = rowNum+counter;
+                    x_best = x_multi;
+                    placeInDeadSpaceMulti = true;
+                    placeInDeadSpace = false;
                 }
             }
         }
@@ -633,14 +633,13 @@ void Placer::legalize()
             }
             else
             {
-                if(check_interval_second_row_trial(_cell,rowNum-counter,rowHeight,1,make_pair(0,INT_MAX),cost,_alpha))
-                {
-                    if(cost < cost_best){
-                        cost_best = cost;
-                        row_best = rowNum-counter;
-                        placeInDeadSpace = false;
-                        placeInDeadSpaceMulti = true;
-                    }
+                double x_multi = reduce_DeadSpace_Multi_trial(_cell, rowNum-counter, rowHeight, _alpha,cost);
+                if(cost < cost_best){
+                    cost_best = cost;
+                    row_best = rowNum-counter;
+                    x_best = x_multi;
+                    placeInDeadSpaceMulti = true;
+                    placeInDeadSpace = false;
                 }
             }
         }
@@ -688,7 +687,7 @@ void Placer::legalize()
         }
         else if(placeInDeadSpaceMulti)
         {
-            assert(check_interval_second_row(_cell, row_best,rowHeight,1, make_pair(0,INT_MAX)));
+            assert(reduce_DeadSpace_Multi(_cell, row_best,rowHeight,1, x_best));
         }
         else
         {
@@ -1874,3 +1873,206 @@ bool Placer::check_interval_second_row(Module* _cell, int _rowNum, int _degree, 
 }
 
 
+bool Placer::reduce_DeadSpace_Multi(Module* _cell, int _rowNum, int _degree, int count, int _x)
+{
+    cout<<"reduce_DeadSpace_Multi\n";
+    cout<<"rowNum = "<<_rowNum<<endl;
+    cout<<"_x = "<<_x<<endl;
+    assert(_cell->isStdCell());
+    if(_rowIdClusterMap[_rowNum] == 0) { return false; }
+    Cluster* _lastClus = _rowIdClusterMap[_rowNum];
+    int last_cell_id = _lastClus->_modules[(_lastClus->_lastNode.find(_rowNum))->second]->_module->dbId();
+    int last_cell_left_x = _lastClus->_x_ref + _lastClus->_delta_x[_lastClus->_cellIdModuleMap.find(last_cell_id)->second];
+
+    //find prev cell of last cell
+    int prev_cell_id = prev_cells[_rowNum][last_cell_id];
+    if( prev_cell_id == -1) 
+    { 
+        cout<<"4\n";
+        cout<<"last_cell_left_x = "<<last_cell_left_x<<endl;
+        if(last_cell_left_x-_cell->width() < _x  || _x < _intervals[_rowNum][0].first ) return false;
+        else if(count!=_degree)
+        {
+            if(reduce_DeadSpace_Multi(_cell,_rowNum,_degree,count+1,_x))
+            {
+                cout<<"1\n";
+                prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
+                next_cells[_rowNum][_cell->dbId()] = last_cell_id;
+                return true;
+            }
+            else return false;
+
+        }
+        else
+        {
+            for(int i = 0; i < _degree ; i++)
+            {
+                if(Is_Interval_Block_Overlap(make_pair(_x,_x+_cell->width()), _rowNum-i)) return false;
+            }
+            Cluster* _clus = new Cluster(_fence_id);
+            Node* _newNode = new Node(_cell, _degree , _rowNum-_degree+1);
+            _clus->_e += _cell->weight();   //numPins()
+
+            //add node to _modules, _cellIdModuleMap
+            _clus->_modules.push_back(_newNode);
+            _clus->_cellIdModuleMap[_cell->dbId()] = _clus->_modules.size()-1;
+
+            //add cell in a cluster, set ref_x, delata_x, q, prev_cells, next_cells
+            _clus->_ref_module = _newNode;
+            _clus->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
+            _clus->_q += (_cell->weight())*(_x);    //q <- q + e*(x'(i)-delta_x(i))
+            //assert on site
+            assert(_x == _cir->g_x_on_site(_x, 0, Circuit::ALIGN_HERE));
+            _newNode->set_x_pos(_x);
+
+            //renew prev cells and next cells
+            prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
+            next_cells[_rowNum][_cell->dbId()] = last_cell_id;
+
+            //re-evaluate position
+            set_x_to_site(_clus);
+
+            // renew _cellIdClusterMap
+            assert(_cellIdClusterMap[_cell->dbId()] == 0);   //assert not exist
+            _cellIdClusterMap[_cell->dbId()] = _clus;
+
+            _clusters[_clus->id] = _clus;
+            _clus->_cost = RenewCost(*_clus);
+            return true;
+        }
+    }
+    Cluster* _prevClus = _cellIdClusterMap[prev_cell_id];
+
+    //find their respective position
+    int prev_cell_right_x= _prevClus->_x_ref + _prevClus->_delta_x[_prevClus->_cellIdModuleMap.find(prev_cell_id)->second];
+    prev_cell_right_x += _cir->module(prev_cell_id).width();
+
+    while(1)
+    {
+        cout<<"Hi, prev_cell_right_x = "<<prev_cell_right_x<<endl;
+        if(_x >= last_cell_left_x) return false;
+        assert(last_cell_left_x >= prev_cell_right_x);
+        if(last_cell_left_x-_cell->width() >= _x && prev_cell_right_x <= _x)
+        {
+            cout<<"5\n";
+            if(count != _degree)
+            {
+                if(reduce_DeadSpace_Multi(_cell, _rowNum+1, _degree, count+1 ,_x))
+                {
+                    cout<<"2\n";
+                    //renew prev cells and next cells
+                    prev_cells[_rowNum][_cell->dbId()] = prev_cell_id;
+                    next_cells[_rowNum][prev_cell_id]  = _cell->dbId();
+
+                    prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
+                    next_cells[_rowNum][_cell->dbId()] = last_cell_id;
+                    return true;
+                }
+                else return false;
+            }
+            else
+            {
+                for(int i = 0; i < _degree ; i++)
+                {
+                    if(Is_Interval_Block_Overlap(make_pair(_x,_x+_cell->width()), _rowNum-i)) return false;
+                }
+                Cluster* _clus = new Cluster(_fence_id);
+                Node* _newNode = new Node(_cell, _degree , _rowNum-_degree+1);
+                _clus->_e += _cell->weight();   //numPins()
+
+                //add node to _modules, _cellIdModuleMap
+                _clus->_modules.push_back(_newNode);
+                _clus->_cellIdModuleMap[_cell->dbId()] = _clus->_modules.size()-1;
+
+                //add cell in a cluster, set ref_x, delata_x, q, prev_cells, next_cells
+                _clus->_ref_module = _newNode;
+                _clus->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
+                _clus->_q += (_cell->weight())*(_x);    //q <- q + e*(x'(i)-delta_x(i))
+                //assert on site
+                assert(_x == _cir->g_x_on_site(_x, 0, Circuit::ALIGN_HERE));
+                _newNode->set_x_pos(_x);
+
+                //renew prev cells and next cells
+                prev_cells[_rowNum][_cell->dbId()] = prev_cell_id;
+                next_cells[_rowNum][prev_cell_id]  = _cell->dbId();
+
+                prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
+                next_cells[_rowNum][_cell->dbId()] = last_cell_id;
+
+                //re-evaluate position
+                set_x_to_site(_clus);
+
+                // renew _cellIdClusterMap
+                assert(_cellIdClusterMap[_cell->dbId()] == 0);   //assert not exist
+                _cellIdClusterMap[_cell->dbId()] = _clus;
+
+                _clusters[_clus->id] = _clus;
+                _clus->_cost = RenewCost(*_clus);
+
+                return true;
+            }
+        }
+        _lastClus = _prevClus;
+        last_cell_id = prev_cell_id;
+        last_cell_left_x = prev_cell_right_x - _cir->module(prev_cell_id).width();
+
+        prev_cell_id = prev_cells[_rowNum][last_cell_id];
+        if( prev_cell_id == -1) 
+        { 
+            cout<<"6\n";
+            if(last_cell_left_x-_cell->width() < _x || _x < _intervals[_rowNum][0].first) return false;
+            else if(count!=_degree)
+            {
+                if(reduce_DeadSpace_Multi(_cell,_rowNum,_degree,count+1,_x))
+                {
+                    cout<<"3\n";
+                    prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
+                    next_cells[_rowNum][_cell->dbId()] = last_cell_id;
+                    return true;
+                }
+                else return false;
+
+            }
+            else
+            {
+                for(int i = 0; i < _degree ; i++)
+                {
+                    if(Is_Interval_Block_Overlap(make_pair(_x,_x+_cell->width()), _rowNum-i)) return false;
+                }
+                Cluster* _clus = new Cluster(_fence_id);
+                Node* _newNode = new Node(_cell, _degree , _rowNum-_degree+1);
+                _clus->_e += _cell->weight();   //numPins()
+
+                //add node to _modules, _cellIdModuleMap
+                _clus->_modules.push_back(_newNode);
+                _clus->_cellIdModuleMap[_cell->dbId()] = _clus->_modules.size()-1;
+
+                //add cell in a cluster, set ref_x, delata_x, q, prev_cells, next_cells
+                _clus->_ref_module = _newNode;
+                _clus->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
+                _clus->_q += (_cell->weight())*(_x);    //q <- q + e*(x'(i)-delta_x(i))
+                //assert on site
+                assert(_x == _cir->g_x_on_site(_x, 0, Circuit::ALIGN_HERE));
+                _newNode->set_x_pos(_x);
+
+                //renew prev cells and next cells
+                prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
+                next_cells[_rowNum][_cell->dbId()] = last_cell_id;
+
+                //re-evaluate position
+                set_x_to_site(_clus);
+
+                // renew _cellIdClusterMap
+                assert(_cellIdClusterMap[_cell->dbId()] == 0);   //assert not exist
+                _cellIdClusterMap[_cell->dbId()] = _clus;
+
+                _clusters[_clus->id] = _clus;
+                _clus->_cost = RenewCost(*_clus);
+                return true;
+            }
+        }
+        _prevClus = _cellIdClusterMap[prev_cell_id];
+        prev_cell_right_x= _prevClus->_x_ref + _prevClus->_delta_x[_prevClus->_cellIdModuleMap.find(prev_cell_id)->second];
+        prev_cell_right_x += _cir->module(prev_cell_id).width();
+    }
+}
