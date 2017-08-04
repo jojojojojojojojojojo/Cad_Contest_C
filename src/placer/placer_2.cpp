@@ -11,7 +11,7 @@ bool pair_compare(pair<double,double>& _p1, pair<double,double>& _p2)
 
 bool pair_compare_2(pair<int,int>& _p1, pair<int,int>& _p2)
 {
-    return (_p1.first<_p2.first);
+    return (_p1.second>_p2.second);
 }
 
 void Placer::clear()
@@ -981,7 +981,7 @@ double Placer::reduce_DeadSpace_Multi_trial(Module* _cell, int _rowNum, int _deg
 {
     cost = DBL_MAX;
     vector< pair<int,int> > block_intervals;
-    int rightbound = INT_MAX;
+    int left = INT_MAX;
     for(int i = 0; i < _degree; i++)
     {
         if(_intervals[_rowNum+i].size() == 0) return DBL_MAX;
@@ -997,7 +997,7 @@ double Placer::reduce_DeadSpace_Multi_trial(Module* _cell, int _rowNum, int _deg
         int last_cell_id = _lastClus->_modules[(_lastClus->_lastNode.find(_rowNum+i))->second]->_module->dbId();
         int last_cell_left_x = _lastClus->_x_ref + _lastClus->_delta_x[_lastClus->_cellIdModuleMap.find(last_cell_id)->second];
         block_intervals.push_back(make_pair(last_cell_left_x,last_cell_left_x+_cir->module(last_cell_id).width()));
-        if(last_cell_left_x+_cir->module(last_cell_id).width() < rightbound) rightbound = last_cell_left_x+_cir->module(last_cell_id).width();
+        if(last_cell_left_x < left) left = last_cell_left_x;
 
         while(1)
         {
@@ -1011,38 +1011,43 @@ double Placer::reduce_DeadSpace_Multi_trial(Module* _cell, int _rowNum, int _deg
     }
     sort(block_intervals.begin(),block_intervals.end(),pair_compare_2);
     
-    int right = block_intervals[0].second;
-    double x_best = DBL_MAX;
-    /*cout<<"rowNum = "<<_rowNum<<endl;
-    cout<<"rightbound = "<<rightbound<<endl;
+    //double x_best = DBL_MAX;
+    //cout<<"rowNum = "<<_rowNum<<endl;
+    /*cout<<"rightbound = "<<rightbound<<endl;
     cout<<"block_intervals[0].first = "<<block_intervals[0].first<<endl;
     cout<<"block_intervals[0].second = "<<block_intervals[0].second<<endl;*/
-    for(unsigned i = 1; i < block_intervals.size(); i++)
+    for(unsigned i = 0; i < block_intervals.size(); i++)
     {
-        /*cout<<"block_intervals["<<i<<"].first = "<<block_intervals[i].first<<endl;
+        /*cout<<"rightbound = "<<left<<endl;
+        cout<<"block_intervals["<<i<<"].first = "<<block_intervals[i].first<<endl;
         cout<<"block_intervals["<<i<<"].second = "<<block_intervals[i].second<<endl;*/
-        if(block_intervals[i].second > rightbound) continue;
-        if(block_intervals[i].first <= right)
+
+        if(block_intervals[i].second >= left)
         {
-            if(block_intervals[i].second > right) right = block_intervals[i].second;
+            if(block_intervals[i].first < left) left = block_intervals[i].first;
         }
         else
         {
-            if(block_intervals[i].first - right >= _cell->width())
+            if(left - block_intervals[i].second >= _cell->width())
             {
-                //cout<<"block_intervals[i].first = "<<block_intervals[i].first<<endl;
-                //cout<<"right = "<<right<<endl;
-                //cout<<"_cell->width() = "<<_cell->width()<<endl;
-                //cout<<"_rowNum = "<<_rowNum<<endl;
-                double temp = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum))+abs(_modPLPos[0][_cell->dbId()].x()-(block_intervals[i].first-_cell->width()));
-                temp -= _alpha * (_cell->width()*_cell->height());
-                if(temp < cost) {
-                    cost = temp;
-                    x_best = block_intervals[i].first-_cell->width();
+                /*cout<<"block_intervals[i].first = "<<block_intervals[i].first<<endl;
+                cout<<"left = "<<left<<endl;
+                cout<<"_cell->width() = "<<_cell->width()<<endl;
+                cout<<"_rowNum = "<<_rowNum<<endl;*/
+                bool overlap = false;
+                for(int j = 0;j < _degree; j++) 
+                {
+                    if(Is_Interval_Block_Overlap(make_pair(left-_cell->width(),left), _rowNum+j)) overlap = true;
+                }
+                if(!overlap) 
+                {              
+                    cost = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum))+abs(_modPLPos[0][_cell->dbId()].x()-(left-_cell->width()));
+                    cost -= _alpha * (_cell->width()*_cell->height());
+                    return left-_cell->width();
                 }
             }
-            right = block_intervals[i].second;
+            left = block_intervals[i].first;
         }
     }
-    return x_best;
+    return DBL_MAX;
 }

@@ -1875,9 +1875,6 @@ bool Placer::check_interval_second_row(Module* _cell, int _rowNum, int _degree, 
 
 bool Placer::reduce_DeadSpace_Multi(Module* _cell, int _rowNum, int _degree, int count, int _x)
 {
-    cout<<"reduce_DeadSpace_Multi\n";
-    cout<<"rowNum = "<<_rowNum<<endl;
-    cout<<"_x = "<<_x<<endl;
     assert(_cell->isStdCell());
     if(_rowIdClusterMap[_rowNum] == 0) { return false; }
     Cluster* _lastClus = _rowIdClusterMap[_rowNum];
@@ -1888,14 +1885,11 @@ bool Placer::reduce_DeadSpace_Multi(Module* _cell, int _rowNum, int _degree, int
     int prev_cell_id = prev_cells[_rowNum][last_cell_id];
     if( prev_cell_id == -1) 
     { 
-        cout<<"4\n";
-        cout<<"last_cell_left_x = "<<last_cell_left_x<<endl;
         if(last_cell_left_x-_cell->width() < _x  || _x < _intervals[_rowNum][0].first ) return false;
         else if(count!=_degree)
         {
-            if(reduce_DeadSpace_Multi(_cell,_rowNum,_degree,count+1,_x))
+            if(reduce_DeadSpace_Multi(_cell,_rowNum+1,_degree,count+1,_x))
             {
-                cout<<"1\n";
                 prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
                 next_cells[_rowNum][_cell->dbId()] = last_cell_id;
                 return true;
@@ -1949,17 +1943,14 @@ bool Placer::reduce_DeadSpace_Multi(Module* _cell, int _rowNum, int _degree, int
 
     while(1)
     {
-        cout<<"Hi, prev_cell_right_x = "<<prev_cell_right_x<<endl;
         if(_x >= last_cell_left_x) return false;
         assert(last_cell_left_x >= prev_cell_right_x);
         if(last_cell_left_x-_cell->width() >= _x && prev_cell_right_x <= _x)
         {
-            cout<<"5\n";
             if(count != _degree)
             {
                 if(reduce_DeadSpace_Multi(_cell, _rowNum+1, _degree, count+1 ,_x))
                 {
-                    cout<<"2\n";
                     //renew prev cells and next cells
                     prev_cells[_rowNum][_cell->dbId()] = prev_cell_id;
                     next_cells[_rowNum][prev_cell_id]  = _cell->dbId();
@@ -2019,13 +2010,11 @@ bool Placer::reduce_DeadSpace_Multi(Module* _cell, int _rowNum, int _degree, int
         prev_cell_id = prev_cells[_rowNum][last_cell_id];
         if( prev_cell_id == -1) 
         { 
-            cout<<"6\n";
             if(last_cell_left_x-_cell->width() < _x || _x < _intervals[_rowNum][0].first) return false;
             else if(count!=_degree)
             {
-                if(reduce_DeadSpace_Multi(_cell,_rowNum,_degree,count+1,_x))
+                if(reduce_DeadSpace_Multi(_cell,_rowNum+1,_degree,count+1,_x))
                 {
-                    cout<<"3\n";
                     prev_cells[_rowNum][last_cell_id]  = _cell->dbId();
                     next_cells[_rowNum][_cell->dbId()] = last_cell_id;
                     return true;
