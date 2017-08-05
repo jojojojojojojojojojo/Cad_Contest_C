@@ -25,6 +25,7 @@ public:
     /////////////////////////////////////////////
     void setTitle(string title);
     void setAutoFit(bool autoFit) {_autoFit = autoFit;}
+    void setWithEdge(bool _edge) {_withEdge = _edge;}
 
     /////////////////////////////////////////////
     // output file
@@ -59,6 +60,7 @@ private:
     // properties
     string _title;
     bool _autoFit;
+    bool _withEdge;
 
 };
 

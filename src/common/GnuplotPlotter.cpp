@@ -26,6 +26,7 @@ string format(const char *fmt, ...)
 GnuplotPlotter::GnuplotPlotter()
 {
     _autoFit = true;
+    _withEdge = false;
     // type "show palette colornames" in gnuplot console to show all color names
     //_colorStrs.push_back("blue");    //default blue (color for cells having no fence region)
     _colorStrs.push_back("red");   
@@ -255,7 +256,21 @@ void GnuplotPlotter::outputPlotFileFence(string filePathName)
         file << format("%f %f", rectangle.left(), rectangle.bottom()) << endl;
         file << endl;
     }
-    file << "EOF" << endl;
+    if(!_withEdge) { file << "EOF" << endl; }
+    if(_withEdge)
+    {
+        for (unsigned i = 0; i < _filled_rects.size(); i++) {
+            Rect &rectangle = _filled_rects[i].first;
+            file << format("%f %f", rectangle.left(), rectangle.bottom()) << endl;
+            file << format("%f %f", rectangle.right(), rectangle.bottom()) << endl;
+            file << format("%f %f", rectangle.right(), rectangle.top()) << endl;
+            file << format("%f %f", rectangle.left(), rectangle.top()) << endl;
+            file << format("%f %f", rectangle.left(), rectangle.bottom()) << endl;
+            file << endl;
+        }
+        file << "EOF" << endl;
+    }
+
     
 
 

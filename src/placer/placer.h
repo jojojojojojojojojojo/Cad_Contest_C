@@ -77,6 +77,7 @@ public:
     // Clear and Initialize (in placer 2)
     /////////////////////////////////////////////
     void clear();
+    void clear_fail();
     void init_fence(int fence_id);
 
     /////////////////////////////////////////////
@@ -144,7 +145,8 @@ public:
     double Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum);
     double Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum);
 
-    bool AddCell_trial(Cluster* _clus, Module* _cell, int _rowNum); //return false if unable to place
+    //return false if unable to place
+    bool AddCell_trial(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell,Node* &_todelete); 
     Cluster* AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _clus);
     Cluster* AddCluster_trial_right(Module* _prevCell, Module* _cell, Cluster* _clus);
 
@@ -177,7 +179,23 @@ public:
     void set_intervals();
     void addBlockedInterval(double lBlk, double rBlk, unsigned rowNum);
     double get_valid_pos(Module* _module, int _rowId);
+
     void Renew_All_Position();
+
+    /////////////////////////////////////////////
+    // Legalization methods for insurance (in placer_insure.cpp)
+    /////////////////////////////////////////////
+    void legalize_dumb();
+    double Multi_PlaceRow_trial_dumb(Module* _cell, int rowNum, const vector<vector<double> >& _rightBound);
+
+    void legalize_very_dumb();
+    bool Multi_PlaceRow_very_dumb(Module* _cell, int rowNum, vector<vector<double> >& _rightBound);
+
+    void legalize_slight_dumb(bool _forcePlace = false);
+    double Multi_PlaceRow_trial_slight_dumb(Module* _cell, int rowNum, const vector<vector<double> >& _rightBound);
+
+    bool find_placeable(Module* _cell, int rowNum, const vector<vector<double> >& _rightBound, vector<pair<double,double> >& _placeables);
+
 
 
     Circuit &cir() {return *_cir;}

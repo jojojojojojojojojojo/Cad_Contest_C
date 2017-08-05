@@ -411,6 +411,9 @@ void Circuit::outputGnuplotFigureFence(string filePathName, bool all, int fence_
     GnuplotPlotter plotter;
     plotter.setNumOfFence(numFregions());
 
+    //comment this out if don't want edge
+    if(fill) { plotter.setWithEdge(true); } 
+
     plotter.setTitle("placement figure");
     if(all)
     {

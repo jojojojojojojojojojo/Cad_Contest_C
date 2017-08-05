@@ -333,7 +333,7 @@ void Placer::print_fanins_fanouts(Cluster* _clus) const
 bool Placer::check_all(int to_index) const
 {
     cout<<"Checking...\n";
-    bool noBlockOverlap = true;
+    bool noBlockOverlap = true, allOnSite = true;
     int numOfOverlap = 0;
     int numOfOutOfBound = 0;
     vector< vector< pair<int,double> > > temp_nodes;
@@ -420,10 +420,19 @@ bool Placer::check_all(int to_index) const
         bool temp = Is_Cluster_Block_Overlap(iter->second,true);
         noBlockOverlap = (noBlockOverlap)?!temp:noBlockOverlap;
     }    
+    if(_cir->check_all_std_cells_on_row_site())
+    {
+        cout<<"*******************All Cells On Site*******************\n";
+    }
+    else
+    {
+        cout<<"****************Not All Cell on Site*******************\n";
+        allOnSite = false;
+    }
     cout<<"*************CHECK REPORT****************"<<endl;
     cout<<"number of overlaps = "<<numOfOverlap<<endl;
     cout<<"number of row out of boundary = "<<numOfOutOfBound<<endl;
-    return (numOfOverlap ==0 && numOfOutOfBound == 0 && noBlockOverlap);   //return true if there is overlap
+    return (numOfOverlap ==0 && numOfOutOfBound == 0 && noBlockOverlap && allOnSite);   //return true if there is overlap
 }
 
 void Placer::print_delta_x(Cluster* _clus) const
@@ -559,11 +568,11 @@ void Placer::legalize()
         //find previous cluster (with max x position) if one exist
         //upward
         
-        for(int counter = 0 ; counter <= (int)(_cir->numRows()-rowNum-rowHeight ) ; counter++)
+        for(int counter = 0 ; counter <= (int)(_cir->numRows()-rowNum-rowHeight-1 ) ; counter++)
         {
             assert(rowNum+counter <= (int)(_cir->numRows()-rowHeight));
             //cout<<"RowNum+counter = "<<rowNum+counter<<endl;
-            if(abs(_cell->y()-_cir->row_id_2_y(rowNum+counter)) > cost_best) break;
+            if(abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(rowNum+counter)) > cost_best) break;
             //if(counter > 15) break;
             if(rowHeight % 2 == 0 && counter % 2 == 1) continue;
             double cost;
@@ -591,7 +600,7 @@ void Placer::legalize()
         {
             assert(rowNum-counter >= 0);
             //cout<<"RowNum+counter = "<<rowNum+counter<<endl;
-            if(abs(_cell->y()-_cir->row_id_2_y(rowNum+counter)) > cost_best) break;
+            if(abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(rowNum-counter)) > cost_best) break;
             //if(counter > 15) break;
             if(rowHeight % 2 == 0 && counter % 2 == 1) continue;
             double cost;
@@ -622,7 +631,7 @@ void Placer::legalize()
             cout<<" ; GP x = "<<_modPLPos[0][_cell->dbId()].x();
             cout<<" ; dead or row = "<<((placeInDeadSpace)?"dead":"row");
             cout<<" ; valid x = "<<get_valid_pos(_cell,row_best)<<endl;*/
-            cin.get();
+            //cin.get();
         }
         //cout<<"cost_best = "<<cost_best<<endl;
         //cout<<"Place In row = "<<row_best<<endl;
@@ -641,29 +650,98 @@ void Placer::legalize()
     //check_all(_cir->numModules()-1);
 }
 
+//method flow:
+//original abacus method -> slight dumb using multi-placeRow -> slight dumb with force placing 
+//->very dumb method
 void Placer::legalize_all()
 {
     bool success = true;
 
-    place_all_mods_to_site();
-    sort_cells();
-
     init_fence(-1);
+    cout<<"Start Legalizing...\n";
     legalize();
     bool region_succeed = check_all(_cir->numModules()-1);
+    if(region_succeed){ clear(); }
+    else { clear_fail(); }    
+    if(!region_succeed)
+    {
+        cout<<endl;
+        init_fence(-1);
+        cout<<"Start Legalizing Dumb...\n";
+        legalize_slight_dumb();
+        region_succeed = check_all(_cir->numModules()-1);
+        if(region_succeed){ clear(); }
+        else {clear_fail();}        
+    }
+    if(!region_succeed)
+    {
+        cout<<endl;
+        init_fence(-1);
+        cout<<"Start Legalizing Dumb Force...\n";
+        legalize_slight_dumb(true);
+        region_succeed = check_all(_cir->numModules()-1);
+        if(region_succeed){ clear(); }
+        else {clear_fail();}        
+    }
+    if(!region_succeed)
+    {
+        cout<<endl;
+        init_fence(-1);
+        cout<<"Start Legalizing Very Dumb...\n";
+        legalize_very_dumb();
+        //legalize_slight_dumb();
+        region_succeed = check_all(_cir->numModules()-1);
+        clear();
+    }
     success = (success)?region_succeed:false;
-    clear();
 
     for(unsigned i = 0 ; i < _cir->numFregions() ; i++)
     {
-        //if(i!=0)continue;
+        //if(i!=1)continue;
         cout<<endl;
         init_fence(i);
         //if(i==0)print_intervals();
+        cout<<"Start Legalizing...\n";
         legalize();
+        //legalize_dumb();
+        //legalize_very_dumb();
+        
         bool region_succeed = check_all(_cir->numModules()-1);
+        if(region_succeed){ clear(); }
+        else { clear_fail(); }        
+        if(!region_succeed)
+        {
+            cout<<endl;
+            init_fence(i);
+            cout<<"Start Legalizing Dumb...\n";
+            legalize_slight_dumb();
+            region_succeed = check_all(_cir->numModules()-1);
+            if(region_succeed){ clear(); }
+            else {clear_fail();}
+            //clear();
+        }
+        if(!region_succeed)
+        {
+            cout<<endl;
+            init_fence(i);
+            cout<<"Start Legalizing Dumb Force...\n";
+            legalize_slight_dumb(true);
+            region_succeed = check_all(_cir->numModules()-1);
+            if(region_succeed){ clear(); }
+            else {clear_fail();}
+            //clear();
+        }
+        if(!region_succeed)
+        {
+            cout<<endl;
+            init_fence(i);
+            cout<<"Start Legalizing Very Dumb...\n";
+            legalize_very_dumb();
+            //legalize_slight_dumb();
+            region_succeed = check_all(_cir->numModules()-1);
+            clear();
+        }
         success = (success)?region_succeed:false;
-        clear();
     }
 
     Renew_All_Position();
@@ -696,8 +774,8 @@ void Placer::AddCell(Cluster* &_clus, Module* _cell, int _rowNum, bool _firstCel
     if(_newNode->_x_pos == DBL_MAX)
     {
         _newNode->set_x_pos(_modPLPos[0][_cell->dbId()].x());
-        cout<<"Warning: placer.cpp line 695 x_pos == DBL_MAX, placement will fail";
-        cin.get();
+        cout<<"Warning: placer.cpp line 697 x_pos == DBL_MAX, placement will fail";
+        //cin.get();
     }
 
     _clus->_e += _cell->weight();   //numPins()
@@ -1283,6 +1361,13 @@ void Placer::RenewPosition(Cluster &c1)
     
     for(size_t i = 0 ; i < c1._modules.size() ; i++){
         Point pos(c1._x_ref+c1._delta_x[i],_cir->row_id_2_y(c1._modules[i]->_rowId));
+        /*if(c1._x_ref+c1._delta_x[i] == 357200 && c1._modules[i]->_rowId == 148)
+        {
+            cout<<"Cell name = "<<c1._modules[i]->_module->name()<<endl;
+            cout<<"row height = "<<(int)(c1._modules[i]->_module->height()/(_cir->rowHeight()))<<endl;
+            cout<<"global position = "<<_modPLPos[0][c1._modules[i]->_module->dbId()].x()<<endl;
+            cin.get();
+        }*/
         if(c1._modules[i]->_degree % 2 == 0)
             move_module_2_pos(*c1._modules[i]->_module,pos,MOVE_ONSITE);
         else
@@ -1410,6 +1495,10 @@ void Placer::set_x_to_site(Cluster* _clus)
     leftmosts.resize(_cir->numRows(), DBL_MAX);
     for(unsigned i = 0 ; i < _clus->_modules.size() ; i++)
     {
+        /*if(_clus->_modules[i]->_module->name() == "h1a/FE_OFC3459_n_69051")
+        {
+            //print_delta_x(_clus);cin.get();
+        }*/
         for(int j = _clus->_modules[i]->_rowId ; j < _clus->_modules[i]->_rowId+_clus->_modules[i]->_degree ; j++)
         {
             if(_clus->_x_ref+_clus->_delta_x[i]+_clus->_modules[i]->_module->width() > rightmosts[j])
@@ -1445,24 +1534,32 @@ void Placer::set_x_to_site(Cluster* _clus)
     {
         for(unsigned i = 0 ; i < _cir->numRows() ; i++)
         {
-            if(_intervals[i].empty()) continue;
+            if(_intervals[i].empty() || (rightmosts[i]==DBL_MIN && leftmosts[i]==DBL_MAX)) continue;
             for(unsigned j = 0 ; j < _intervals[i].size() ; j++)
             {
                 if(_intervals[i][j].first <= leftmosts[i] && _intervals[i][j].second >= rightmosts[i]) { break; }
-                if(j != 0 && _intervals[i][j-1].second > leftmosts[i]) { break; }
-                if(_intervals[i][j].first - leftmosts[i] > rightshift)
+                //if(j != 0 && _intervals[i][j-1].second > leftmosts[i]) { break; }
+                if(_intervals[i][j].first > leftmosts[i] )
                 {
-                    rightshift = (_intervals[i][j].first - leftmosts[i]);
+                    if((_intervals[i][j].second-_intervals[i][j].first) < rightmosts[i]-leftmosts[i]) continue;
+                    if(_intervals[i][j].first - leftmosts[i] > rightshift)
+                    {
+                        rightshift = (_intervals[i][j].first - leftmosts[i]);
+                    } 
                     break;
                 }
             }  
             for(int j = (int)_intervals[i].size()-1 ; j >= 0 ; j--)
             { 
                 if(_intervals[i][j].first <= leftmosts[i] && _intervals[i][j].second >= rightmosts[i]) { break; }
-                if(j != (int)_intervals[i].size()-1 && _intervals[i][j+1].first < rightmosts[i]) { break; }
-                if(rightmosts[i] - _intervals[i][j].second > leftshift)
+                //if(j != (int)_intervals[i].size()-1 && _intervals[i][j+1].first < rightmosts[i]) { break; }
+                if(rightmosts[i] > _intervals[i][j].second )
                 { 
-                    leftshift = rightmosts[i] - _intervals[i][j].second;
+                    if((_intervals[i][j].second-_intervals[i][j].first) < rightmosts[i]-leftmosts[i]) continue;
+                    if(rightmosts[i] - _intervals[i][j].second > leftshift)
+                    {
+                        leftshift = rightmosts[i] - _intervals[i][j].second;
+                    }
                     break;
                 } 
             }

@@ -1,7 +1,7 @@
 QMAKE_CXXFLAGS += -O3 -Wall -static -std=c++11 -fopenmp
 
 OBJECTS_DIR = objects
-TARGET      = cad2017
+TARGET      = cada041
 
 INCLUDEPATH += \ # start from the binary file
     $$PWD/includes
@@ -21,6 +21,7 @@ SOURCES += \ # start from the .pro file
     src/parser/parser.cpp \
     src/placer/placer.cpp \
     src/placer/placer_2.cpp \
+    src/placer/placer_insure.cpp \
     src/placer/node.cpp \
     src/main.cpp
 

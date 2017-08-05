@@ -75,6 +75,9 @@ int main( int argc, char ** argv )
     clock_t start, finish;
     finish = start = clock();
 
+    placer.place_all_mods_to_site();
+    placer.sort_cells();
+    double lower_disp_bound = placer.compute_displacement(Placer::PL_INIT);
 
     //placer.print_cell_order();
     placer.legalize_all();
@@ -99,14 +102,17 @@ int main( int argc, char ** argv )
     cout<<"GP GPWL = "<<gp_hpwl<<endl;
     cout<<"LG HPWL = "<<lg_hpwl<<endl;
     cout<<"Increase in HPWL = "<<((lg_hpwl-gp_hpwl)/gp_hpwl)*100<<"%"<<endl;
+    cout<<"Displacement(Lower Bound) = "<<lower_disp_bound<<endl;
     cout<<"Displacement = "<<displacement<<endl;
+    cout<<"Average Displacement(Lower Bound) = "<<(lower_disp_bound/(circuit.rowHeight()*circuit.numModules()))<<endl;
     cout<<"Average Displacement = "<<(displacement/(circuit.rowHeight()*circuit.numModules()))<<endl;
     
     circuit.showInfo();
 
     cout<<"Writing plot file\n";
     //circuit.outputGnuplotFigure("result.plt");
-    circuit.outputGnuplotFigureFence("result_fence.plt");
+    circuit.outputGnuplotFigureFence("result_fence.plt",true,1,false);
+    circuit.outputGnuplotFigureFence("result_fence_full.plt",true,1,true);
     //circuit.outputGnuplotFigureFence("result_fence.plt");
 
     if(param.outDefFile != param.UNKNOWN) { parser.writeDEF( param.defFile , param.outDefFile); }

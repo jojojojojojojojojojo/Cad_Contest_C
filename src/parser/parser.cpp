@@ -26,7 +26,7 @@ void Parser::parse()
     else
     {
         if( parseDefault() == false ){
-            cout << " ex: ./cad2017 [-iccad17] -tech_lef <.lef> -cell_lef <.lef> -pl_def <.def> -pl_con <.constraints> [-out <.def>]" << endl;
+            cout << " ex: ./cada041 [-iccad17] -tech_lef <.lef> -cell_lef <.lef> -pl_def <.def> -pl_con <.constraints> [-out <.def>]" << endl;
             exit( 0 );
         }
     }
