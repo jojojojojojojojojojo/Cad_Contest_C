@@ -6,7 +6,7 @@
 //used in sorting intervals
 bool pair_compare_insure(pair<double,double>& _p1, pair<double,double>& _p2)
 {
-    return (_p1.second<_p2.second);
+    return (_p1.first<_p2.first);
 }
 
 bool pair_compare_insure_dt(pair<double,int>& _p1, pair<double,int>& _p2)
@@ -14,7 +14,7 @@ bool pair_compare_insure_dt(pair<double,int>& _p1, pair<double,int>& _p2)
     return (_p1.first<_p2.first);
 }
 
-void Placer::legalize_very_dumb()
+bool Placer::legalize_very_dumb()
 {
     vector<vector<double> > _rightBound;//right bound of each interval
     _rightBound.resize(_cir->numRows());
@@ -66,16 +66,15 @@ void Placer::legalize_very_dumb()
                 }
                 if(!success)
                 {
-                    assert(false);
-                    if(rowHeight % 2 == 0 && rowNum %2 == 1) Multi_PlaceRow(_cell,rowHeight,1);
-                    else Multi_PlaceRow(_cell,rowHeight,0);
+                    return false;
                 }
             }
         }        
     }
+    return true;
 }
 
-void Placer::legalize_slight_dumb(bool _forcePlace)
+bool Placer::legalize_slight_dumb(bool _forcePlace)
 {
 	//double _alpha = (_utilization > 0.8)?0.005:0.000; // a function of the "density" of the design (subject to change)
     vector<vector<double> > _rightBound;//right bound of each interval
@@ -151,7 +150,8 @@ void Placer::legalize_slight_dumb(bool _forcePlace)
 		    }
             if(cost_best == DBL_MAX)
             {
-            	cout<<"QQ again";// cin.get();
+            	cout<<"QQ again\n";// cin.get();
+            	return false;
             }
             //put cell in 
             vector<int> _interId;      // to store the interval index for each row
@@ -214,7 +214,7 @@ void Placer::legalize_slight_dumb(bool _forcePlace)
         }       
     }
     
-    if(_forcePlace) { return; }
+    if(_forcePlace) { return true; }
 
     sort(_position_id_order.begin(), _position_id_order.end(), pair_compare_insure_dt);
 
@@ -233,6 +233,8 @@ void Placer::legalize_slight_dumb(bool _forcePlace)
         //cout<<"_cellRow[_position_id_order[i].second] = "<<_cellRow[_position_id_order[i].second]<<endl;
         Multi_PlaceRow(_cell,rowHeight,_cellRow[_position_id_order[i].second]);
     }
+
+    return true;
 }
 
 double Placer::Multi_PlaceRow_trial_slight_dumb(Module* _cell, int rowNum, const vector<vector<double> >& _rightBound)
@@ -244,7 +246,7 @@ double Placer::Multi_PlaceRow_trial_slight_dumb(Module* _cell, int rowNum, const
     double _position = get_valid_pos(_cell, rowNum);
     if(_position == DBL_MAX) { return DBL_MAX; }
     //_position = _cir->g_x_on_site(_position,0,Circuit::ALIGN_RIGHT);
-    if(rowNum < 0 || (rowNum+rowHeight) >= (int)(_cir->numRows())) { return DBL_MAX; }
+    if(rowNum < 0 || (rowNum+rowHeight) > (int)(_cir->numRows())) { return DBL_MAX; }
 
     //find _interval index in each row
     vector<int> _interId;      // to store the interval index for each row
@@ -305,7 +307,7 @@ bool Placer::Multi_PlaceRow_very_dumb(Module* _cell, int rowNum, vector<vector<d
 
 	assert(_cell->isStdCell()); //assert is standard cell (module includes preplaced blocks, I/O pins)
     int rowHeight = (int)(_cell->height()/_cir->rowHeight());
-    if(rowNum < 0 || (rowNum+rowHeight) >= (int)(_cir->numRows())) { return false; }
+    if(rowNum < 0 || (rowNum+rowHeight) > (int)(_cir->numRows())) { return false; }
 
     //cout<<"RowNum = "<<rowNum<<endl;
     double _toPlace = DBL_MIN;
@@ -365,12 +367,12 @@ bool Placer::Multi_PlaceRow_very_dumb(Module* _cell, int rowNum, vector<vector<d
     return true;
 }
 
-bool Placer::find_placeable(Module* _cell, int rowNum, const vector<vector<double> >& _rightBound, vector<pair<double,double> >& _placeables)
+bool Placer::find_placeable(Module* _cell, int rowNum, const vector<vector<double> >& _rightBound, vector<pair<double,double> >& _placeables, bool debugMode)
 {
     assert(_cell->isStdCell()); //assert is standard cell (module includes preplaced blocks, I/O pins)
     int rowHeight = (int)(_cell->height()/_cir->rowHeight());
     _placeables.clear();
-    if(rowNum < 0 || (rowNum+rowHeight) >= (int)(_cir->numRows())) { return false; }
+    if(rowNum < 0 || (rowNum+rowHeight) > (int)(_cir->numRows())) { return false; }
 
     vector<pair<double, double> > _blocks;
     double _rightmost = DBL_MIN, _leftmost = DBL_MAX;
@@ -382,19 +384,37 @@ bool Placer::find_placeable(Module* _cell, int rowNum, const vector<vector<doubl
         if(_rightmost < interval_right) { _rightmost = interval_right; } 
         if(_leftmost > interval_left) { _leftmost = interval_left; }
     }
+    if(_rightmost < _leftmost) { return false; }
+
+    if(debugMode)
+    {
+    	cout<<">> leftmost = "<<_leftmost<<" ; rightmost = "<<_rightmost<<endl;
+    }
 
     for(int i = rowNum ; i < rowNum+rowHeight ; i++)
     {
         vector<pair<double, double> > _empty_slots;
+        if(debugMode){cout<<"\nRow = rowNum+"<<(i-rowNum)<<endl;}
         for(unsigned j = 0 ; j < _intervals[i].size() ; j++)
         {
             double interval_right = _cir->g_x_on_site(_intervals[i][j].second,0,Circuit::ALIGN_LEFT);
+            if(debugMode)
+            {
+            	cout<<">> rightBound["<<i<<"]["<<j<<"] = "<<_rightBound[i][j];
+            	cout<<" ; interval_right = "<<interval_right<<endl;
+            }
             if(_rightBound[i][j] < interval_right)
             {
                 _empty_slots.push_back(make_pair(_rightBound[i][j], interval_right));
             }            
         }
-
+        if(debugMode)
+        {
+        	for(unsigned j = 1 ; j < _empty_slots.size() ; j++)
+	        {
+	            cout<<">> empty_slots["<<j<<"] = ("<<_empty_slots[j].first<<", "<<_empty_slots[j].second<<")\n";
+	        }
+        }
         if(_empty_slots.empty()) { _blocks.push_back(make_pair(_leftmost,_rightmost)); }
         else
         {
@@ -408,13 +428,19 @@ bool Placer::find_placeable(Module* _cell, int rowNum, const vector<vector<doubl
         }
     }
     sort(_blocks.begin(), _blocks.end(), pair_compare_insure);
-    vector<pair<double,double> > _tmp_blocks;
+    if(debugMode)
+    {
+    	for(unsigned i = 0 ; i < _blocks.size() ; i++)
+    	{
+    		cout<<">> _blocks["<<i<<"] = ("<<_blocks[i].first<<", "<<_blocks[i].second<<")\n";
+    	}
+    }
     unsigned _index = 0;
     for(unsigned i = 1 ; i < _blocks.size() ; i++)
     {
         if(_blocks[_index].second >= _blocks[i].first)
         {
-            _blocks[_index].second = _blocks[i].second;
+            _blocks[_index].second = (_blocks[_index].second>_blocks[i].second)?_blocks[_index].second:_blocks[i].second;
             _blocks.erase( vector<pair<double,double> >::iterator( &(_blocks[i]) ) );
             --i;
         }
@@ -422,6 +448,15 @@ bool Placer::find_placeable(Module* _cell, int rowNum, const vector<vector<doubl
         {
             _index = i;
         }
+    }
+    if(debugMode)
+    {
+    	cout<<"////////////AFTER MERGING/////////"<<endl;
+    	cout<<"_blocks.size() =="<<_blocks.size()<<endl;
+    	for(unsigned i = 0 ; i < _blocks.size() ; i++)
+    	{
+    		cout<<">> _blocks["<<i<<"] = ("<<_blocks[i].first<<", "<<_blocks[i].second<<")\n";
+    	}
     }
     if(_blocks.empty()) { _placeables.push_back(make_pair(_leftmost,_rightmost)); }
     else
@@ -600,7 +635,7 @@ double Placer::Multi_PlaceRow_trial_dumb(Module* _cell, int rowNum, const vector
     double _position = get_valid_pos(_cell, rowNum);
     if(_position == DBL_MAX) { return DBL_MAX; }
     //_position = _cir->g_x_on_site(_position,0,Circuit::ALIGN_RIGHT);
-    if(rowNum < 0 || (rowNum+rowHeight) >= (int)(_cir->numRows())) { return DBL_MAX; }
+    if(rowNum < 0 || (rowNum+rowHeight) > (int)(_cir->numRows())) { return DBL_MAX; }
 
     //find _interval index in each row
     vector<int> _interId;      // to store the interval index for each row

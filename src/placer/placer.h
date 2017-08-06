@@ -118,7 +118,7 @@ public:
     bool check_cluster_internal_overlap(Cluster* _clus);
     bool check_all(int to_index) const;
 
-    void legalize();
+    bool legalize();
     void legalize_all();
     //void try_area2();
 
@@ -182,21 +182,27 @@ public:
 
     void Renew_All_Position();
 
+    //bool reduce_DeadSpace_double(Module* _cell, int _rowNum);
+    bool check_interval_second_row(Module* _cell, int _rowNum, int _degree, int count, pair<int,int> inter);
+    bool check_interval_second_row_trial(Module* _cell, int _rowNum, int _degree, int count , pair<int,int> inter, double& cost, double _alpha);
+
+    double reduce_DeadSpace_Multi_trial(Module* _cell, int _rowNum, int _degree, double _alpha, double& cost);
+    bool reduce_DeadSpace_Multi(Module* _cell, int _rowNum, int _degree, int count, double _x);
+
+
     /////////////////////////////////////////////
     // Legalization methods for insurance (in placer_insure.cpp)
     /////////////////////////////////////////////
     void legalize_dumb();
     double Multi_PlaceRow_trial_dumb(Module* _cell, int rowNum, const vector<vector<double> >& _rightBound);
 
-    void legalize_very_dumb();
+    bool legalize_very_dumb();
     bool Multi_PlaceRow_very_dumb(Module* _cell, int rowNum, vector<vector<double> >& _rightBound);
 
-    void legalize_slight_dumb(bool _forcePlace = false);
+    bool legalize_slight_dumb(bool _forcePlace = false);
     double Multi_PlaceRow_trial_slight_dumb(Module* _cell, int rowNum, const vector<vector<double> >& _rightBound);
 
-    bool find_placeable(Module* _cell, int rowNum, const vector<vector<double> >& _rightBound, vector<pair<double,double> >& _placeables);
-
-
+    bool find_placeable(Module* _cell, int rowNum, const vector<vector<double> >& _rightBound, vector<pair<double,double> >& _placeables, bool debugMode =false);
 
     Circuit &cir() {return *_cir;}
 

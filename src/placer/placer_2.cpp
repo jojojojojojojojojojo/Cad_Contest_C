@@ -9,6 +9,17 @@ bool pair_compare(pair<double,double>& _p1, pair<double,double>& _p2)
     return (_p1.second<_p2.second);
 }
 
+bool pair_compare_2(pair<int,int>& _p1, pair<int,int>& _p2)
+{
+    return (_p1.second>_p2.second);
+}
+
+bool pair_compare_dead(pair<double,double>& _p1, pair<double,double>& _p2)
+{
+    if(_p1.first==_p2.first){ return (_p1.second<_p2.second); }
+    return (_p1.first<_p2.first);
+}
+
 void Placer::clear()
 {
     fill(_rowIdClusterMap.begin(),_rowIdClusterMap.end(),(Cluster*)(0));
@@ -794,9 +805,12 @@ void Placer::set_intervals()
         Fregion* _fregion =  &_cir->fregion(_id);
         for(unsigned i = 0;i < _fregion->numRects(); i++)
         {
-            for(unsigned j = _fregion->rect(i).bottom() ; j < _fregion->rect(i).top() ; j+=_cir->rowHeight() )
+            int bottomId,topid;
+            _cir->rect2RowIds(_fregion->rect(i), bottomId, topid);
+            if( (int)(bottomId*_cir->rowHeight()) != _fregion->rect(i).bottom()){ ++bottomId; }
+            for(int j = bottomId ; j <= topid ; j++)
             {
-                int rowNum = _cir->y_2_row_id(j);
+                int rowNum = j;
                 if(_intervals[rowNum].empty())
                 {
                     _intervals[rowNum].push_back(make_pair(_fregion->rect(i).left(),_fregion->rect(i).right()));
@@ -887,7 +901,7 @@ double Placer::get_valid_pos(Module* _cell, int _rowId)
     double x_pos = _modPLPos[0][_cell->dbId()].x();
     int _rowNum = (int)(_cell->height()/_cir->rowHeight()); 
 
-    if(_rowId < 0 || (_rowId+_rowNum) >= (int)(_cir->numRows())) { return DBL_MAX; }
+    if(_rowId < 0 || (_rowId+_rowNum) > (int)(_cir->numRows())) { return DBL_MAX; }
 
     // find candidate position for left and right
     double left_cand = x_pos, right_cand = x_pos;
@@ -968,3 +982,331 @@ void Placer::Renew_All_Position()
 
     cout<<"Cluster number = "<<_clusters.size()<<endl;
 }
+
+/*bool Placer::check_interval_second_row_trial(Module* _cell, int _rowNum, int _degree, int count , pair<int,int> inter, double& cost, double _alpha)
+{
+    //cout<<"check_interval_second_row_trial\n";
+    //cout<<"degree = "<<_degree<<endl;
+    //cout<<"count = "<<count<<endl;
+    if(_intervals[_rowNum].size() == 0) return false;
+    if(count > _degree) return false;
+    assert(_cell->isStdCell()); //assert is standard cell (module includes preplaced blocks, I/O pins)
+    //assert((int)(_cell->height()/_cir->rowHeight()) == 2);  //assert single row height
+   // bool find_deadSpace = false;
+    Cluster* _clus = 0; //use to store cell after finding a space
+
+    //find last cell in row
+    if(_rowIdClusterMap[_rowNum] == 0) { return false; }
+    Cluster* _lastClus = _rowIdClusterMap[_rowNum];
+    int last_cell_id = _lastClus->_modules[(_lastClus->_lastNode.find(_rowNum))->second]->_module->dbId();
+    int last_cell_left_x = _lastClus->_x_ref + _lastClus->_delta_x[_lastClus->_cellIdModuleMap.find(last_cell_id)->second];
+
+    //find prev cell of last cell
+    int prev_cell_id = prev_cells[_rowNum][last_cell_id];
+    if( prev_cell_id == -1) 
+    { 
+        if(last_cell_left_x <= inter.first) return false;
+        if(last_cell_left_x >= _cell->width())
+        {
+            int left = max((int)_intervals[_rowNum][0].first,inter.first);
+            int right = min(last_cell_left_x,inter.second);
+            assert(right >= left);
+            if(right - left < _cell->width()) return false;
+            if(count == _degree)
+            {
+                for(int i = 0; i < _degree ; i++)
+                {
+                    if(Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum-i)) return false;
+                }
+                cost = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum-_degree+1))+abs(_modPLPos[0][_cell->dbId()].x()-(right-_cell->width()));
+                cost -= _alpha * (_cell->width()*_cell->height());
+                return true;
+            }
+            else
+            {
+                if(check_interval_second_row_trial(_cell, _rowNum+1, _degree, count+1 , make_pair(left,right),cost,_alpha))
+                {
+                    return true;
+                }
+                else return false;
+            }
+        }
+        else { return false; }
+    }
+
+    Cluster* _prevClus = _cellIdClusterMap[prev_cell_id];
+
+    //find their respective position
+    int prev_cell_right_x= _prevClus->_x_ref + _prevClus->_delta_x[_prevClus->_cellIdModuleMap.find(prev_cell_id)->second];
+    prev_cell_right_x += _cir->module(prev_cell_id).width();
+
+    //search the dead space cells by cells starting from the last cell in _rowNum
+    while(1)
+    {
+        assert(last_cell_left_x >= prev_cell_right_x);
+        if(last_cell_left_x <= inter.first) return false;
+        if(prev_cell_right_x < inter.second)
+        {
+            if(last_cell_left_x - prev_cell_right_x >= _cell->width())
+            {
+                int left = max(prev_cell_right_x,inter.first);
+                int right = min(last_cell_left_x,inter.second);
+                if(count == _degree)
+                {
+                    bool overlap = false;
+                    for(int i = 0; i < _degree ; i++)
+                    {
+                        if(Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum-i)) overlap = true;
+                    }
+                    if(right - left >= _cell->width() && !overlap)
+                    {
+                        cost = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum-_degree+1))+abs(_modPLPos[0][_cell->dbId()].x()-(right-_cell->width()));
+                        cost -= _alpha * (_cell->width()*_cell->height());
+                        return true;
+                    } 
+                }
+                else
+                {
+                    if(check_interval_second_row_trial(_cell, _rowNum+1, _degree, count+1 ,make_pair(left,right),cost,_alpha))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        _lastClus = _prevClus;
+        last_cell_id = prev_cell_id;
+        last_cell_left_x = prev_cell_right_x - _cir->module(prev_cell_id).width();
+
+        prev_cell_id = prev_cells[_rowNum][last_cell_id];
+        if( prev_cell_id == -1) 
+        { 
+            if(last_cell_left_x <= inter.first) return false;
+            if(last_cell_left_x >= _cell->width())
+            {
+                int left = max((int)_intervals[_rowNum][0].first,inter.first);
+                int right = min(last_cell_left_x,inter.second);
+                if(right - left < _cell->width()) return false;
+                if(count == _degree)
+                {
+                    if(last_cell_left_x >= _cell->width())
+                    {
+                        assert(right >= left);
+                        for(int i = 0; i < _degree ; i++)
+                        {
+                            if(Is_Interval_Block_Overlap(make_pair(right-_cell->width(),right), _rowNum-i)) return false;
+                        }
+                        cost = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum-_degree+1))+abs(_modPLPos[0][_cell->dbId()].x()-(right-_cell->width()));
+                        cost -= _alpha * (_cell->width()*_cell->height());
+                        return true;
+                    }
+                    else { return false; }
+                }
+                else
+                {
+                    if(check_interval_second_row_trial(_cell, _rowNum+1, _degree, count+1, make_pair(left,right),cost,_alpha))
+                    {
+                        return true;
+                    }
+                    else return false;
+                }
+            }
+            else return false;
+        }
+        _prevClus = _cellIdClusterMap[prev_cell_id];
+        prev_cell_right_x= _prevClus->_x_ref + _prevClus->_delta_x[_prevClus->_cellIdModuleMap.find(prev_cell_id)->second];
+        prev_cell_right_x += _cir->module(prev_cell_id).width();
+    }
+}*/
+
+
+double Placer::reduce_DeadSpace_Multi_trial(Module* _cell, int _rowNum, int _degree, double _alpha, double& cost)
+{
+    cost = DBL_MAX;
+    vector< pair<double,double> > block_intervals;
+    //int left = INT_MAX;
+    if(_rowNum < 0 || (_rowNum+_degree) > (int)_cir->numRows() ) { return DBL_MAX; }
+
+    double _rightmost = DBL_MIN, _leftmost = DBL_MAX;
+    double last_cell_rightmost = DBL_MIN;
+
+    bool exist_cell = false;
+
+    for(int i = _rowNum ; i < _rowNum+_degree ; i++)
+    {
+        if(_intervals[i].empty()) { return DBL_MAX; }
+        double interval_right = _cir->g_x_on_site(_intervals[i].back().second,0,Circuit::ALIGN_LEFT);
+        double interval_left = _cir->g_x_on_site(_intervals[i][0].first,0,Circuit::ALIGN_RIGHT);
+        if(_rightmost < interval_right) { _rightmost = interval_right; } 
+        if(_leftmost > interval_left) { _leftmost = interval_left; }
+    }
+
+    //cout<<"in2..";cout.flush();
+    for(int i = 0; i < _degree; i++)
+    {
+        if(_intervals[_rowNum+i].empty()) {return DBL_MAX;}
+        
+        double interval_left = _cir->g_x_on_site(_intervals[_rowNum+i][0].first,0,Circuit::ALIGN_RIGHT);
+        double interval_right = _cir->g_x_on_site(_intervals[_rowNum+i].back().second,0,Circuit::ALIGN_LEFT);
+
+        block_intervals.push_back(make_pair(_leftmost,interval_left));
+        if(_intervals[_rowNum+i].size() >= 2)
+        {
+            for(unsigned j = 0; j<_intervals[_rowNum+i].size()-1; j++) 
+            {    
+                block_intervals.push_back(make_pair(_intervals[_rowNum+i][j].second,_intervals[_rowNum+i][j+1].first));
+            }
+        }
+        block_intervals.push_back(make_pair(interval_right,_rightmost));
+        if(_rowIdClusterMap[_rowNum+i] == 0) continue;
+        exist_cell = true;
+        
+        Cluster* _lastClus = _rowIdClusterMap[_rowNum+i];
+        int last_cell_id = _lastClus->_modules[(_lastClus->_lastNode.find(_rowNum+i))->second]->_module->dbId();
+        double last_cell_left_x = _lastClus->_x_ref + _lastClus->_delta_x[_lastClus->_cellIdModuleMap.find(last_cell_id)->second];
+        block_intervals.push_back(make_pair(last_cell_left_x,last_cell_left_x+_cir->module(last_cell_id).width()));
+        if(last_cell_left_x+_cir->module(last_cell_id).width() > last_cell_rightmost) 
+        {    
+            last_cell_rightmost = (last_cell_left_x+_cir->module(last_cell_id).width());
+        }
+
+        while(1)
+        {
+            //find prev cell of last cell
+            last_cell_id = prev_cells[_rowNum+i][last_cell_id];
+            if(last_cell_id == -1) break;
+            _lastClus = _cellIdClusterMap[last_cell_id];
+            last_cell_left_x = _lastClus->_x_ref + _lastClus->_delta_x[_lastClus->_cellIdModuleMap.find(last_cell_id)->second];
+            block_intervals.push_back(make_pair(last_cell_left_x,last_cell_left_x+_cir->module(last_cell_id).width()));
+        }
+    }
+    if(last_cell_rightmost <= _rightmost){block_intervals.push_back(make_pair(last_cell_rightmost,_rightmost));}
+
+    if(!exist_cell) { return DBL_MAX; }
+    sort(block_intervals.begin(),block_intervals.end(),pair_compare_dead);
+    unsigned _index = 0;
+    for(unsigned i = 1 ; i < block_intervals.size() ; i++)
+    {
+        if(block_intervals[_index].second >= block_intervals[i].first)
+        {
+            block_intervals[_index].second = (block_intervals[_index].second>block_intervals[i].second)?block_intervals[_index].second:block_intervals[i].second;
+            block_intervals.erase( vector<pair<double,double> >::iterator( &(block_intervals[i]) ) );
+            --i;
+        }
+        else
+        {
+            _index = i;
+        }
+    }
+
+    vector<pair<double,double> > _placeables;
+    _placeables.clear();
+    if(block_intervals.empty()) { assert(false) ;}//_placeables.push_back(make_pair(_leftmost,_rightmost)); 
+    else
+    {
+        if(_leftmost != block_intervals[0].first) { _placeables.push_back(make_pair(_leftmost, block_intervals[0].first)); }
+        if(_rightmost != block_intervals.back().second) { return DBL_MAX; }
+        //if(_rightmost != block_intervals.back().second) { _placeables.push_back(make_pair(block_intervals.back().second,_rightmost)); }
+    }
+    for(unsigned j = 1 ; j < block_intervals.size() ; j++)
+    {
+        assert(block_intervals[j-1].second < block_intervals[j].first);
+        _placeables.push_back(make_pair(block_intervals[j-1].second, block_intervals[j].first));        
+    }
+    for(int i = (int)(_placeables.size()-1); i >= 0 ; i--)
+    {
+        if((_placeables[i].second-_placeables[i].first)>= _cell->width())
+        {
+            double _toPlace = _placeables[i].second-_cell->width();
+            _toPlace = _cir->g_x_on_site(_toPlace, 0, Circuit::ALIGN_LEFT);
+            for(int j = 0 ; j < _degree ; j++)
+            {
+                assert(!Is_Interval_Block_Overlap(make_pair(_toPlace,_toPlace+_cell->width()),_rowNum+j));
+            }
+            cost = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum))+abs(_modPLPos[0][_cell->dbId()].x()-_toPlace);
+            cost -= _alpha * (_cell->width()*_cell->height());
+            return _toPlace;
+        }
+    }
+    return DBL_MAX;
+}
+
+/*
+double Placer::reduce_DeadSpace_Multi_trial(Module* _cell, int _rowNum, int _degree, double _alpha, double& cost)
+{
+    cost = DBL_MAX;
+    vector< pair<int,int> > block_intervals;
+    int left = INT_MAX;
+    if(_rowNum < 0 || (_rowNum+_degree) > (int)_cir->numRows() ) { return DBL_MAX; }
+    for(int i = 0; i < _degree; i++)
+    {
+        if(_intervals[_rowNum+i].empty()) return DBL_MAX;
+        if(_rowIdClusterMap[_rowNum+i] == 0) return DBL_MAX;
+        block_intervals.push_back(make_pair(0,_intervals[_rowNum+i][0].first));
+        if(_intervals[_rowNum+i].size() >= 2)
+        {
+            for(unsigned j = 0; j<_intervals[_rowNum+i].size()-1; j++) 
+            {    
+                block_intervals.push_back(make_pair(_intervals[_rowNum+i][j].second,_intervals[_rowNum+i][j+1].first));
+            }
+        }
+        block_intervals.push_back(make_pair(_intervals[_rowNum+i].back().second,_cir->chipRect().right()));
+        
+        Cluster* _lastClus = _rowIdClusterMap[_rowNum+i];
+        int last_cell_id = _lastClus->_modules[(_lastClus->_lastNode.find(_rowNum+i))->second]->_module->dbId();
+        int last_cell_left_x = _lastClus->_x_ref + _lastClus->_delta_x[_lastClus->_cellIdModuleMap.find(last_cell_id)->second];
+        block_intervals.push_back(make_pair(last_cell_left_x,last_cell_left_x+_cir->module(last_cell_id).width()));
+        if(last_cell_left_x < left) left = last_cell_left_x;
+
+        while(1)
+        {
+            //find prev cell of last cell
+            last_cell_id = prev_cells[_rowNum+i][last_cell_id];
+            if(last_cell_id == -1) break;
+            _lastClus = _cellIdClusterMap[last_cell_id];
+            last_cell_left_x = _lastClus->_x_ref + _lastClus->_delta_x[_lastClus->_cellIdModuleMap.find(last_cell_id)->second];
+            block_intervals.push_back(make_pair(last_cell_left_x,last_cell_left_x+_cir->module(last_cell_id).width()));
+        }
+    }
+    sort(block_intervals.begin(),block_intervals.end(),pair_compare_2);
+    
+    //double x_best = DBL_MAX;
+    //cout<<"rowNum = "<<_rowNum<<endl;
+    //cout<<"rightbound = "<<rightbound<<endl;
+    //cout<<"block_intervals[0].first = "<<block_intervals[0].first<<endl;
+    //cout<<"block_intervals[0].second = "<<block_intervals[0].second<<endl;
+    for(unsigned i = 0; i < block_intervals.size(); i++)
+    {
+        //cout<<"rightbound = "<<left<<endl;
+        //cout<<"block_intervals["<<i<<"].first = "<<block_intervals[i].first<<endl;
+        //cout<<"block_intervals["<<i<<"].second = "<<block_intervals[i].second<<endl;
+
+        if(block_intervals[i].second >= left)
+        {
+            if(block_intervals[i].first < left) left = block_intervals[i].first;
+        }
+        else
+        {
+            if(left - block_intervals[i].second >= _cell->width())
+            {
+                //cout<<"block_intervals[i].first = "<<block_intervals[i].first<<endl;
+                //cout<<"left = "<<left<<endl;
+                //cout<<"_cell->width() = "<<_cell->width()<<endl;
+                //cout<<"_rowNum = "<<_rowNum<<endl;
+                bool overlap = false;
+                for(int j = 0;j < _degree; j++) 
+                {
+                    if(Is_Interval_Block_Overlap(make_pair(left-_cell->width(),left), _rowNum+j)) overlap = true;
+                }
+                if(!overlap) 
+                {              
+                    cost = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum))+abs(_modPLPos[0][_cell->dbId()].x()-(left-_cell->width()));
+                    cost -= _alpha * (_cell->width()*_cell->height());
+                    return left-_cell->width();
+                }
+            }
+            left = block_intervals[i].first;
+        }
+    }
+    return DBL_MAX;
+}*/
