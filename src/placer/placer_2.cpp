@@ -341,6 +341,7 @@ bool Placer::AddCell_trial(Cluster* _clus,Module* _cell, int _rowNum, bool _firs
         Node* _newNode = new Node(_cell, rowHeight, _rowNum);
         _todelete = _newNode;
         _newNode->set_x_pos(get_valid_pos(_cell,_rowNum));    
+        //_newNode->set_x_pos(_modPLPos[0][_cell->dbId()].x());
         if(_newNode->_x_pos == DBL_MAX) { return false; }
         _clus->_e += _cell->weight();   //numPins()
 

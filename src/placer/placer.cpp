@@ -111,41 +111,6 @@ bool Placer::move_module_2_pos(Module &mod, const Point &pos, MOVE_TYPE mt)
             assert(mod.orient() == OR_N || mod.orient() == OR_S);
             Orient _orient = ((mod.orient()==OR_N)?OR_S:OR_N);
             mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , _orient);
-            /*
-            switch(mod.orient()){
-                case OR_N:
-                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_S);
-                     break;
-                case OR_W:
-                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_E);
-                     break;
-                case OR_S:
-                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_N);
-                     break;
-                case OR_E:
-                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_W);
-                     break;
-                case OR_FN:
-                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_FS);
-                     break;
-                case OR_FW:
-                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_FE);
-                     break;
-                case OR_FS:
-                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_FN);  
-                     break;
-                case OR_FE:
-                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , OR_FW);
-                     break;
-                default:
-                     mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() );
-                     break;
-            }
-            */
-            // still thinking a better way to deal with rotation
-            // FN -> FS & FN -> S , which one is better ?
-            // Is it possible that VSS is on the EAST or WEST side ?
-            // Since we are just dealing with N and S right now, use simpler ((mod.orient()==OR_N)?OR_S:OR_N) 
         }
         mod.setIsBottomVss();
     }
@@ -259,13 +224,23 @@ void Placer::place_valid_site(Module &mod)
     int rowId;
     Orient orient = mod.orient();
     bool before = mod.isBottomVss(),change = false;
-    if((int)(mod.height()/_cir->rowHeight())%2 == 0)
+    int rowHeight = (int)(mod.height()/_cir->rowHeight());
+    if(rowHeight % 2 == 0)
     {
         rowId =find_valid_row(mod);
     }
     else
     {
         rowId = _cir->y_2_row_id( mod.y() );
+        if(rowId < (int)(_cir->numRows()-rowHeight))
+        {
+            if(abs(_cir->row_id_2_y(rowId)-mod.y()) > abs(_cir->row_id_2_y(rowId+1)-mod.y()))
+            {
+                rowId++;
+            }
+        }
+        if(rowId > (int)(_cir->numRows()-rowHeight)) { rowId = (int)(_cir->numRows()-rowHeight); }
+        if(rowId < 0){ rowId = 0; }
         if(_cir->isRowBottomVss(rowId) != mod.isBottomVss())
         { 
             orient = ((mod.orient()==OR_N)?OR_S:OR_N); 
@@ -277,6 +252,8 @@ void Placer::place_valid_site(Module &mod)
     mod.setPosition( xPos, yPos, _cir->chipRect(), orient );
     mod.setIsBottomVss();
     if(change) { assert(before != mod.isBottomVss()); }
+    else { assert(before == mod.isBottomVss()); }
+    assert(_cir->isRowBottomVss(rowId)== mod.isBottomVss());
 }
 
 void Placer::place_all_mods_to_site()
@@ -336,7 +313,6 @@ bool Placer::check_all(int to_index) const
     bool noBlockOverlap = true, allOnSite = true;
     int numOfOverlap = 0;
     int numOfOutOfBound = 0;
-    int numOfWrongPG = 0;
     vector< vector< pair<int,double> > > temp_nodes;
     temp_nodes.resize(_cir->numRows());
     for(int i = 0 ; i <= to_index ; i++)
@@ -431,25 +407,40 @@ bool Placer::check_all(int to_index) const
         cout<<"****************Not All Cell on Site*******************\n";
         allOnSite = false;
     }
-    for(int i = 0 ; i < to_index ; i++)
+    cout<<"*************CHECK REPORT****************"<<endl;
+    cout<<"number of overlaps = "<<numOfOverlap<<endl;
+    cout<<"number of row out of boundary = "<<numOfOutOfBound<<endl;
+    return (numOfOverlap ==0 && numOfOutOfBound == 0 && noBlockOverlap && allOnSite);   //return true if there is overlap
+}
+
+bool Placer::check_PG() const
+{
+    int numOfWrongPG = 0;
+    for(unsigned i = 0 ; i < _cir->numModules() ; i++)
     {
         if(!_cir->module(i).isStdCell()) continue;
-        if(_fence_id == -1 && _cir->cellRegion(i) != 0) continue;
-        if(_fence_id != -1 && (_cir->cellRegion(i) == 0 || (int)_cir->cellRegion(i)->id() != _fence_id)) continue;
-        
+
         Module* _cell = &_cir->module(i);
+        string orig_Vss = (_cell->isBottomVss())?"Vss":"Vdd";
         _cell->setIsBottomVss();
         int rowNum = _cir->y_2_row_id(_cell->y());
         if(_cell->isBottomVss() != _cir->isRowBottomVss(rowNum))
         {
             numOfWrongPG++;
+            cout<<">> PG alignment issue..."<<endl;
+            cout<<"_cellIdClusterMap = "<<_cellIdClusterMap[_cell->dbId()]<<endl;
+            cout<<"Cell Name = "<<_cell->name()<<endl;
+            cout<<"Cell Height = "<<(int)(_cell->height()/_cir->rowHeight())<<endl;
+            cout<<"Row Num = "<<rowNum<<endl;
+            cout<<"orig Vss = "<<orig_Vss<<endl;
+            cout<<"new Vss = "<<((_cell->isBottomVss())?"Vss":"Vdd")<<endl;
+            cout<<"row Vss = "<<((_cir->isRowBottomVss(rowNum))?"Vss":"Vdd")<<endl;
         }
     }
-    cout<<"*************CHECK REPORT****************"<<endl;
-    cout<<"number of overlaps = "<<numOfOverlap<<endl;
-    cout<<"number of row out of boundary = "<<numOfOutOfBound<<endl;
+
+    cout<<"*************CHECK PG REPORT****************"<<endl;
     cout<<"number of wrong PG alignment = "<<numOfWrongPG<<endl;
-    return (numOfOverlap ==0 && numOfOutOfBound == 0 && noBlockOverlap && allOnSite && numOfWrongPG == 0);   //return true if there is overlap
+    return  ( numOfWrongPG == 0 );
 }
 
 void Placer::print_delta_x(Cluster* _clus) const
@@ -650,7 +641,8 @@ bool Placer::legalize()
             }
             
             if(rowHeight == 1)     //try placing in dead space
-            {                cost = reduce_DeadSpace_trial(_cell, rowNum-counter, _alpha);
+            {                
+                cost = reduce_DeadSpace_trial(_cell, rowNum-counter, _alpha);
                 if(cost < cost_best){
                     cost_best = cost;
                     row_best = rowNum-counter;
@@ -792,6 +784,9 @@ void Placer::legalize_all()
 
     Renew_All_Position();
 
+    region_succeed = check_PG();
+    success = (success)?region_succeed:false;
+
     cout<<"******************* RESULT *********************"<<endl;
     cout<<"*** "<<((success)?"SUCCESS !!":"FAIL !!")<<endl;
     cout<<"************************************************"<<endl;
@@ -820,7 +815,7 @@ void Placer::AddCell(Cluster* &_clus, Module* _cell, int _rowNum, bool _firstCel
     if(_newNode->_x_pos == DBL_MAX)
     {
         _newNode->set_x_pos(_modPLPos[0][_cell->dbId()].x());
-        cout<<"Warning: placer.cpp line 697 x_pos == DBL_MAX, placement will fail";
+        cout<<"Warning: placer.cpp line 831 x_pos == DBL_MAX, placement will fail";
         //cin.get();
     }
 
@@ -855,7 +850,7 @@ void Placer::AddCell(Cluster* &_clus, Module* _cell, int _rowNum, bool _firstCel
     {
         int delta_x = INT_MIN;
         // find previous node in cluster ( set "all"(not just adjacent ones) previous cells to FIs)->already modified 
-
+        //_newNode->set_x_pos(_modPLPos[0][_cell->dbId()].x());
         // renew prev_cells at the same time
         for(int i = 0; i < rowHeight ; i++)   
         {

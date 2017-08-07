@@ -51,11 +51,12 @@ int main( int argc, char ** argv )
     	cout<<"Row "<<i<<"'s bottom is "<<(circuit.isRowBottomVss(i)?"Vss":"Vdd");
     	cout<<"; Orientation = "<< orientStr(circuit.row(i).orient())<<endl;
     }
+    cin.get();*/
 
-    cout<<"Row Height = "<<circuit.row(0).height()<<endl;
-    cout<<"Module Height = "<<circuit.module(0).height()<<endl;
-    Row::site.showInfo();
-    */
+    //cout<<"Row Height = "<<circuit.row(0).height()<<endl;
+    //cout<<"Module Height = "<<circuit.module(0).height()<<endl;
+    //Row::site.showInfo();
+    
 
     cout<<"Writing plot file\n";
     //circuit.outputGnuplotFigure("orig.plt");

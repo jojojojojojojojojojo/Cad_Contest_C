@@ -117,6 +117,7 @@ public:
     void print_intervals() const;
     bool check_cluster_internal_overlap(Cluster* _clus);
     bool check_all(int to_index) const;
+    bool check_PG() const;
 
     bool legalize();
     void legalize_all();
