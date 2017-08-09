@@ -22,6 +22,7 @@ int main( int argc, char ** argv )
     Placer placer( circuit );
     //placer.save_modules_2_pos(Placer::PL_INIT);
     circuit.setCellRegion();
+    circuit.setNumOfCells();
 
     /*
     placer.find_utilization();
@@ -103,10 +104,12 @@ int main( int argc, char ** argv )
     cout<<"GP GPWL = "<<gp_hpwl<<endl;
     cout<<"LG HPWL = "<<lg_hpwl<<endl;
     cout<<"Increase in HPWL = "<<((lg_hpwl-gp_hpwl)/gp_hpwl)*100<<"%"<<endl;
-    cout<<"Displacement(Lower Bound) = "<<lower_disp_bound<<endl;
-    cout<<"Displacement = "<<displacement<<endl;
-    cout<<"Average Displacement(Lower Bound) = "<<(lower_disp_bound/(circuit.rowHeight()*circuit.numModules()))<<endl;
-    cout<<"Average Displacement = "<<(displacement/(circuit.rowHeight()*circuit.numModules()))<<endl;
+    cout<<"Average Displacement(Lower Bound) = "<<(lower_disp_bound/(circuit.rowHeight()))<<endl;
+    cout<<"Average Displacement = "<<(displacement/(circuit.rowHeight()))<<endl;
+    cout<<"Maximum Displacement = "<<(placer.max_displacement(Placer::PL_INIT)/circuit.rowHeight())<<endl;
+
+    double raw_score = placer.raw_score(gp_hpwl);
+    cout<<"Raw Score Range = ("<<raw_score<<", "<<raw_score*1.2<<")"<<endl;
     
     circuit.showInfo();
 

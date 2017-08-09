@@ -86,6 +86,8 @@ public:
     double compute_hpwl();
     enum PL_TYPE { PL_INIT=0, PL_LAST, PL_BEST };
     double compute_displacement(const PL_TYPE &pt);
+    double max_displacement(const PL_TYPE &pt);
+    double raw_score(double global_hpwl);
     const Point &mod_2_pos( Module &mod, const PL_TYPE &pt ){ return _modPLPos[pt][ mod.dbId() ]; }
 
     /////////////////////////////////////////////

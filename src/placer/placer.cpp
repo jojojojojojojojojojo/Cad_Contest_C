@@ -83,9 +83,69 @@ double Placer::compute_displacement(const Placer::PL_TYPE &pt)
     double totalDisp = 0;
     for( size_t i=0; i<_cir->numComponents(); ++i ){
         Module &mod = _cir->module(i);
+        if(!mod.isStdCell()) continue;
         totalDisp += Point::dist( mod.pos(), mod_2_pos(mod, pt) );
     }
-    return totalDisp;
+    return (totalDisp/_cir->numOfCells(0));
+}
+
+double Placer::max_displacement(const Placer::PL_TYPE &pt)
+{
+    double maxDisp = 0;
+    for( size_t i=0; i<_cir->numComponents(); ++i ){
+        Module &mod = _cir->module(i);
+        double disp = Point::dist( mod.pos(), mod_2_pos(mod, pt) );
+        if(maxDisp < disp) { maxDisp = disp; }
+    }
+    return maxDisp;
+}
+
+double Placer::raw_score(double global_hpwl)
+{
+    cout<<"//////////////Raw Score Estimate//////////////\n";
+    double Sam = 0,Smm = 0,Shpwl = 0;
+
+    for(int h = 1; h <= 4; h++)
+    {
+        double aveDisp = 0;
+        for( size_t i=0; i<_cir->numComponents(); ++i )
+        {
+            Module &mod = _cir->module(i);
+            if((int)(mod.height()/_cir->rowHeight()) != h) continue;
+            aveDisp += Point::dist( mod.pos(), mod_2_pos(mod, PL_INIT) );
+        }
+        if(_cir->numOfCells(h) != 0)
+        {
+            Sam += (aveDisp/(_cir->numOfCells(h)*_cir->rowHeight()));
+            cout<<"S average = "<<(aveDisp/(_cir->numOfCells(h)*_cir->rowHeight()))<<" for height = "<<h<<endl;
+        }
+    }
+    Sam /= 4;
+
+    double SigmaMi = 0, MaxDisp = 0, Fmm = 0;
+    int Mx = 0;
+    if( param.maxDisp > 0 ){ Mx = param.maxDisp; }
+    else { Mx = _cir->numRows(); }
+
+    for( size_t i=0; i<_cir->numComponents(); ++i )
+    {
+        Module &mod = _cir->module(i);
+        double disp = Point::dist( mod.pos(), mod_2_pos(mod, PL_INIT) );
+        if(MaxDisp < disp) { MaxDisp = disp; }
+        if((int)(disp/_cir->rowHeight()) >= Mx ) { SigmaMi += disp; }
+    }
+    MaxDisp /= (_cir->rowHeight()*100);
+    SigmaMi /= _cir->rowHeight();
+    Fmm = max((SigmaMi/Mx),(double)1);
+
+    Smm = 1 + MaxDisp*Fmm;
+
+    Shpwl = max((compute_hpwl()-global_hpwl)/global_hpwl,(double)0);
+
+    cout<<"Average Movement Score = "<<Sam<<endl;
+    cout<<"Maximum Movement Score = "<<Smm<<endl;
+
+    return (Sam*Smm*(1+Shpwl));
 }
 
 bool Placer::move_module_2_pos(Module &mod, const Point &pos, MOVE_TYPE mt)
@@ -550,7 +610,7 @@ bool Placer::check_cluster_internal_overlap(Cluster* _clus)
 bool Placer::legalize()
 {
     bool _multiDeadSpace = true;
-    double _alpha = (_utilization > 0.8)?0.005:0.000; // a function of the "density" of the design (subject to change)
+    double _alpha = (_utilization > 0.8)?0.004:0.000; // a function of the "density" of the design (subject to change)
     //if(_utilization <= 0.8 && _utilization > 0.7) { _alpha  = 0.001; }
     cout<<"Number Of modules = "<<_cir->numModules()<<endl;
     cout<<"_alpha = "<<_alpha<<" ; _utilization = "<<_utilization<<endl;
@@ -1421,12 +1481,15 @@ void Placer::RenewPosition(Cluster &c1)
 
 double Placer::RenewCost(Cluster &c1)   
 {
-    double _cost = 0; // already had a data member "cost" in class cluster, we can just store cost in there
-                   // need to return new cost & compare, so I can't store in c1._cost, right? 
+    double _cost = 0, temp_cost; 
     for(size_t i = 0 ; i < c1._modules.size() ; i++){
-        _cost += abs(c1._x_ref+c1._delta_x[i]-_modPLPos[0][c1._modules[i]->_module->dbId()].x()); 
-        _cost += abs(_cir->row_id_2_y(c1._modules[i]->_rowId)-_modPLPos[0][c1._modules[i]->_module->dbId()].y());
+        temp_cost = 0;
+        temp_cost += abs(c1._x_ref+c1._delta_x[i]-_modPLPos[0][c1._modules[i]->_module->dbId()].x()); 
+        temp_cost += abs(_cir->row_id_2_y(c1._modules[i]->_rowId)-_modPLPos[0][c1._modules[i]->_module->dbId()].y());
         // how about y ? where should we store the temporary y of all cells ? ans: in node's rowId
+        //unsigned cellHeight = (unsigned)(c1._modules[i]->_module->height()/_cir->rowHeight());
+        //temp_cost *= (0.25*_cir->numOfCells(0)/_cir->numOfCells(cellHeight));
+        _cost += temp_cost;
     }
     return _cost;
 }
