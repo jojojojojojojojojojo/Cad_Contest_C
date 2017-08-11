@@ -518,6 +518,7 @@ double Placer::reduce_DeadSpace_trial(Module* _cell, int _rowNum, double _alpha)
             }
             cost = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum))+abs(_modPLPos[0][_cell->dbId()].x()-(last_cell_left_x-_cell->width()));
             cost -= _alpha * (_cell->width()*_cell->height());
+            //cost *= (0.25*_cir->numOfCells(0)/_cir->numOfCells(1));
             return cost;
         }
         else { return DBL_MAX; }
@@ -551,6 +552,7 @@ double Placer::reduce_DeadSpace_trial(Module* _cell, int _rowNum, double _alpha)
 
             cost = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum))+abs(_modPLPos[0][_cell->dbId()].x()-prev_cell_right_x);
             cost -= _alpha * (_cell->width()*_cell->height());
+            //cost *= (0.25*_cir->numOfCells(0)/_cir->numOfCells(1));
         }
         else
         {
@@ -569,6 +571,7 @@ double Placer::reduce_DeadSpace_trial(Module* _cell, int _rowNum, double _alpha)
                     }
                     cost = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum))+abs(_modPLPos[0][_cell->dbId()].x()-(last_cell_left_x-_cell->width()));
                     cost -= _alpha * (_cell->width()*_cell->height());
+                    //cost *= (0.25*_cir->numOfCells(0)/_cir->numOfCells(1));
                     return cost;
                 }
                 else { return DBL_MAX; }
@@ -1216,6 +1219,7 @@ double Placer::reduce_DeadSpace_Multi_trial(Module* _cell, int _rowNum, int _deg
             }
             cost = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum))+abs(_modPLPos[0][_cell->dbId()].x()-_toPlace);
             cost -= _alpha * (_cell->width()*_cell->height());
+            //cost *= (0.25*_cir->numOfCells(0)/_cir->numOfCells(_degree));
             return _toPlace;
         }
     }

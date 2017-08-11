@@ -135,12 +135,14 @@ class Circuit
     inline void print_nets();
     inline void print_modules();
     inline void print_modRegions();
+    inline void print_numCells();
 
     ///////////////////////////////////////////////////////////////
     //                Newly Added Functions (ICCAD'17)           //
     ///////////////////////////////////////////////////////////////
 
     Fregion* cellRegion(unsigned cellId) { return _cellIdRegionMap[cellId]; }
+    int numOfCells(unsigned rowNum) { return _numOfCells[rowNum]; }
 
     void setCellRegion();       //set _cellIdRegionMap here
     void remove_sites_fence_region_all() { remove_sites_fence_region(_rows); }
@@ -149,6 +151,8 @@ class Circuit
     bool isRowBottomVss(const unsigned& _rowId);
     void outputGnuplotFigure(string filePathName);
     void outputGnuplotFigureFence(string filePathName, bool all = true, int fence_id = -1, bool fill = false);
+
+    void setNumOfCells();
 
 private:
     /////////////////////////////////////////////
@@ -190,7 +194,17 @@ private:
     ///////////////////////////////////////////////////////////////
 
     vector<Fregion*> _cellIdRegionMap;  // cell Id to fence region ptr ; == 0 if no fence region for the cell
+    vector<int> _numOfCells;    //number of cells with row height == (index of vector+1)
 };
+
+void Circuit::print_numCells()
+{
+    cout<<"Print Num Of Cells...\n";
+    for(unsigned i = 0 ; i < _numOfCells.size() ; i++)
+    {
+        cout<<">> _numOfCells["<<i<<"] = "<<_numOfCells[i]<<endl;
+    }
+}
 
 void Circuit::print_fregions()
 {

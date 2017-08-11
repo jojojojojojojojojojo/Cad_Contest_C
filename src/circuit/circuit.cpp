@@ -455,3 +455,16 @@ void Circuit::outputGnuplotFigureFence(string filePathName, bool all, int fence_
     
     plotter.outputPlotFileFence(filePathName);
 }
+
+void Circuit::setNumOfCells()
+{
+    _numOfCells.clear();
+    _numOfCells.resize(5,0);
+    for(unsigned i = 0 ; i < numModules() ; i++)
+    {
+        Module &mod = module(i);
+        if(!mod.isStdCell()) continue;
+        _numOfCells[(unsigned)(mod.height()/rowHeight())]++;
+        _numOfCells[0]++;
+    }
+}
