@@ -29,8 +29,8 @@ public:
         _delta_x = n._delta_x;
         _cost = n._cost;
         _fence_id = n._fence_id;
-        _lastNode = n._lastNode;
-        _cellIdModuleMap = n._cellIdModuleMap;
+        //_lastNode = n._lastNode;
+        //_cellIdModuleMap = n._cellIdModuleMap;
         _modules = n._modules;
     }
     ~Cluster() {}
@@ -47,8 +47,8 @@ private:
     double _cost;               //stored cost
     int _fence_id;               //fence region
 
-    map<int,int> _lastNode;     //last node in each row (first: rowId, second: index in _modules)
-    map<int,int> _cellIdModuleMap;// mapping between cell id and _modules (first: cellId, second: index in _modules)
+    //map<int,int> _lastNode;     //last node in each row (first: rowId, second: index in _modules) ***
+    //map<int,int> _cellIdModuleMap;// mapping between cell id and _modules (first: cellId, second: index in _modules) ***
     vector<Node*> _modules;     //all Modules 
 };
 
@@ -57,7 +57,7 @@ class Placer
 public:
     Placer(Circuit &inCir): _cir(&inCir), _modPLPos(0), _fence_id(-1) {
         _modPLPos.resize( 3, vector<Point>( _cir->numModules() ) );
-        _rowIdClusterMap.resize(_cir->numRows(),0);
+        _rowIdModuleMap.resize(_cir->numRows(),0);
         _cellIdClusterMap.resize(_cir->numModules(),0);
         prev_cells.resize(_cir->numRows());
         next_cells.resize(_cir->numRows());
@@ -128,7 +128,7 @@ public:
     /////////////////////////////////////////////////
 
     //change return type and input variables if neccessary
-    void AddCell(Cluster* &_clus, Module* _cell, int _rowNum, bool _firstCell);
+    void AddCell(Cluster* &_clus, Module* _cell, int _rowNum, int maxX);
     Cluster* AddCluster(Module* _prevCell, Module* _cell, bool _clus2prevClus = false);
     Cluster* Decluster(Cluster* _clus, const vector<int>& _ori_delta_x);
 
@@ -147,7 +147,7 @@ public:
     double Multi_PlaceRow_trial(Module* _cell, int rowHeight, int rowNum);
 
     //return false if unable to place
-    bool AddCell_trial(Cluster* _clus, Module* _cell, int _rowNum, bool _firstCell,Node* &_todelete); 
+    bool AddCell_trial(Cluster* _clus, Module* _cell, int _rowNum, int maxX ,Node* &_todelete); 
     Cluster* AddCluster_trial(Module* _prevCell, Module* _cell, Cluster* _clus);
     Cluster* AddCluster_trial_right(Module* _prevCell, Module* _cell, Cluster* _clus);
 
@@ -218,12 +218,12 @@ private:
     //vector<Point> _modInitPos, _modLastPos, _modBestPos;
 
     vector<int> cell_order;                 // used as legalization order ( _cir->module(cell_order[0]) : first cell )
-    vector<Cluster*> _rowIdClusterMap;      // store the last cluster in every row
+    vector<Module*> _rowIdModuleMap;      // store the last cluster in every row ***
     vector<Cluster*> _cellIdClusterMap;     // use to store cell cluster mapping (index = dbId())
     //vector< map<int,int> > prev_cells;    // use this to detect nearby previous cells (this cell id to prev cell id)
     //vector< map<int,int> > next_cells;    // use this to detect nearby previous cells (this cell id to prev cell id)
     vector< vector<int> > prev_cells;       // try to store it in static array to reduce time
-    vector< vector<int> > next_cells;       // empty if value == -1
+    vector< vector<int> > next_cells;       // empty if value == -1 
 
     vector< vector< pair<double,double> > > _intervals;   // for fregions (first index : rows ; second index : intervals)
     int _fence_id;                          // fence region id the placer is currently placing
