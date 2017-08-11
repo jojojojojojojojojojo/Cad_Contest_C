@@ -21,7 +21,7 @@ public:
         : _name(name), _x(-1), _y(-1), _width(width), _height(height),
           _isFixed(isFixed), _isDFF(false), _orient(OR_N), _isBottomVss(false),
           _classType(""), _edgeTypeLeft(0), _edgeTypeRight(0),
-          _masterId(-1), _rects(0), _dbId(-1)
+          _masterId(-1), _rects(0), _dbId(-1), _Id_in_clus(-1), _Id_in_clus_trial(-1)
     {}
 
     static bool LesserY( const Module* m1, const Module* m2 ){
@@ -63,6 +63,8 @@ public:
     void scaleRect(unsigned i, double s){ _rects[i].scale_me(s); }
     unsigned dbId()                     {return _dbId;}
 
+    int id_in_clus()                    {return _Id_in_clus;}
+    int id_in_clus_trial()                    {return _Id_in_clus_trial;}
     /////////////////////////////////////////////
     // set
     /////////////////////////////////////////////
@@ -154,6 +156,8 @@ public:
         point.set_x_y( x, y );
     }
 
+    void set_id_in_clus(int i)                    {_Id_in_clus = i;}
+    void set_id_in_clus_trial(int i)              {_Id_in_clus_trial = i;}
     /////////////////////////////////////////////
     // get (for pins of this modules)
     /////////////////////////////////////////////
@@ -242,6 +246,9 @@ public:
     int                      _masterId; // fixed I/O pin: -1
     vector<Rect>            _rects;     // rectilinear shape
     int                     _dbId;      // index in circuit._modules
+    // newly added
+    int                     _Id_in_clus;
+    int                     _Id_in_clus_trial;          
 };
 
 void Module::shift_and_scale(const Point &p, const double &s, bool isBack = false)

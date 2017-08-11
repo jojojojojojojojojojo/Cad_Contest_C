@@ -203,7 +203,7 @@ bool Placer::legalize_slight_dumb(bool _forcePlace)
 			    _cluster->_e += _cell->weight();   //numPins()
 			    //add module to _modules, _cellIdModuleMap
 			    _cluster->_modules.push_back(_newNode);
-			    _cluster->_cellIdModuleMap[_cell->dbId()] = _cluster->_modules.size()-1;
+                _cell->set_id_in_clus(_cluster->_modules.size()-1);
 			    _cluster->_ref_module = _newNode;
 			    _cluster->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
 			    _cluster->_q += (_cell->weight())*(_newNode->_x_pos);    //q <- q + e*(x'(i)-delta_x(i))
@@ -355,7 +355,7 @@ bool Placer::Multi_PlaceRow_very_dumb(Module* _cell, int rowNum, vector<vector<d
     _cluster->_e += _cell->weight();   //numPins()
     //add module to _modules, _cellIdModuleMap
     _cluster->_modules.push_back(_newNode);
-    _cluster->_cellIdModuleMap[_cell->dbId()] = _cluster->_modules.size()-1;
+    _cell->set_id_in_clus(_cluster->_modules.size()-1);
     _cluster->_ref_module = _newNode;
     _cluster->_delta_x.push_back(0);      // delta_x == 0 if module == ref module
     _cluster->_q += (_cell->weight())*(_newNode->_x_pos);    //q <- q + e*(x'(i)-delta_x(i))
