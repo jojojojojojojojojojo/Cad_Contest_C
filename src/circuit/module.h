@@ -63,8 +63,10 @@ public:
     void scaleRect(unsigned i, double s){ _rects[i].scale_me(s); }
     unsigned dbId()                     {return _dbId;}
 
+
     int id_in_clus()                    {return _Id_in_clus;}
-    int id_in_clus_trial()                    {return _Id_in_clus_trial;}
+    int id_in_clus_trial()              {return _Id_in_clus_trial;}
+
     /////////////////////////////////////////////
     // set
     /////////////////////////////////////////////
@@ -156,8 +158,10 @@ public:
         point.set_x_y( x, y );
     }
 
-    void set_id_in_clus(int i)                    {_Id_in_clus = i;}
-    void set_id_in_clus_trial(int i)              {_Id_in_clus_trial = i;}
+    void set_id_in_clus(int i)          {_Id_in_clus = i; sync_id(); }
+    void set_id_in_clus_trial(int i)    {_Id_in_clus_trial = i;}
+    void sync_id() { _Id_in_clus_trial = _Id_in_clus; }
+
     /////////////////////////////////////////////
     // get (for pins of this modules)
     /////////////////////////////////////////////
@@ -246,9 +250,10 @@ public:
     int                      _masterId; // fixed I/O pin: -1
     vector<Rect>            _rects;     // rectilinear shape
     int                     _dbId;      // index in circuit._modules
+
     // newly added
     int                     _Id_in_clus;
-    int                     _Id_in_clus_trial;          
+    int                     _Id_in_clus_trial;
 };
 
 void Module::shift_and_scale(const Point &p, const double &s, bool isBack = false)
