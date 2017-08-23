@@ -114,6 +114,7 @@ double Placer::Multi_PlaceRow(Module* _cell, int rowHeight, int rowNum)
             _cluster = Collapse(_cluster);//,i==18363);
             _cluster = Collapse_right(_cluster);
         }
+        //Decluster(_cluster);
         _cluster->_cost = RenewCost(*_cluster);
     }
     /*
@@ -227,11 +228,14 @@ bool Placer::AddCell_trial(Cluster* _clus,Module* _cell, int _rowNum, int maxX, 
 {
     //cout<<"AddCell\n";
     int rowHeight = (int)(_cell->height()/_cir->rowHeight());
+
+    Node* _newNode = new Node(_cell, rowHeight, _rowNum);
+    _newNode->set_x_pos(get_valid_pos(_cell,_rowNum));    
+    //_newNode->set_x_pos(_modPLPos[0][_cell->dbId()].x()); 
+
     if(maxX == INT_MIN)
     {
-        Node* _newNode = new Node(_cell, rowHeight, _rowNum);
         _todelete = _newNode;
-        _newNode->set_x_pos(get_valid_pos(_cell,_rowNum));    
         if(_newNode->_x_pos == DBL_MAX) { return false; }
         _clus->_e += _cell->weight();
         _clus->_modules.push_back(_newNode);
@@ -246,10 +250,8 @@ bool Placer::AddCell_trial(Cluster* _clus,Module* _cell, int _rowNum, int maxX, 
     {
         assert(_clus->_modules.size() != 0);
         assert(_cell->isStdCell()); //assert is standard cell (module includes preplaced blocks, I/O pins)
-        int rowHeight = (int)(_cell->height()/_cir->rowHeight());
-        Node* _newNode = new Node(_cell, rowHeight, _rowNum);
+        
         _todelete = _newNode;
-        _newNode->set_x_pos(get_valid_pos(_cell,_rowNum));    
         //_newNode->set_x_pos(_modPLPos[0][_cell->dbId()].x());
         if(_newNode->_x_pos == DBL_MAX) { return false; }
         _clus->_e += _cell->weight();   //numPins()

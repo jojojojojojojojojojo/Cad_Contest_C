@@ -37,6 +37,8 @@ public:
     const string name() const {return _name;}
     double x() const    {return _x;} // x coordinates
     double y() const    {return _y;} // y coordinates //(x,y): lower-left point of the block
+    double gp_x() const {return _gp_x;}
+    double gp_y() const {return _gp_y;}
     Point pos() const   {return Point(_x, _y);}
     double centerX()    {return _x + _width/2;}
     double centerY()    {return _y + _height/2;}
@@ -195,6 +197,8 @@ public:
         _isBottomVss = ((int)(yPos/Row::site.height())%2 == 0)?true:false;
     }
 
+    void setGpPos(const double& x, const double& y) { _gp_x = x ; _gp_y = y; }
+
 
     void showInfo(){
         cout.setf(ios::fixed);
@@ -230,6 +234,7 @@ public:
     // variables from benchmark input
     string                  _name;
     double                  _x, _y; // low x and low y
+    double                  _gp_x,_gp_y;  //new added for gnuplot
     double                  _width, _height;
     bool                    _isFixed;
     bool                    _isDFF;

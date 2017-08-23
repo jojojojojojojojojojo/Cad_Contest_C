@@ -19,17 +19,22 @@ void Parser::parse()
     unitLEF = unitDEF = 0;
     preFixedModules.clear();
 
+    if( parseICCAD17() == false ){
+        cout << " ex: ./cada041 [-iccad17] -tech_lef <.lef> -cell_lef <.lef> -pl_def <.def> -pl_con <.constraints> [-out <.def>]" << endl;
+        exit( 0 );
+    }
+    /*
     if( gArg.checkExist( "iccad17" ) )
     {
         parseICCAD17();
-    }
+    }    
     else
     {
         if( parseDefault() == false ){
             cout << " ex: ./cada041 [-iccad17] -tech_lef <.lef> -cell_lef <.lef> -pl_def <.def> -pl_con <.constraints> [-out <.def>]" << endl;
             exit( 0 );
         }
-    }
+    }*/
 
     _cir->identify_FFs_PIOs( "ck" ); // for ICCAD'15 Contest (17 as well)
     _cir->createSNetIndexVec();
@@ -43,7 +48,7 @@ void Parser::parse()
     }
 }
 
-void Parser::parseICCAD17()
+bool Parser::parseICCAD17()
 {
     param.bmt = ParamHandler::BMT_ICCAD17;
     bool isFilesNameCorrect = true;
@@ -61,28 +66,28 @@ void Parser::parseICCAD17()
         cout << "  cell_lef         : " << param.cellLefFile << endl;
     }else { cerr << "[ERROR] Missing cell_lef ..." << endl; isFilesNameCorrect = false; }
 
-    if( gArg.checkExist( "pl_def" ) ){
-        gArg.getString( "pl_def", &param.defFile );
-        cout << "  pl_def    : " << param.defFile << endl;
-    }else { cerr << "[ERROR] Missing pl_def ..." << endl; isFilesNameCorrect = false; }
+    if( gArg.checkExist( "input_def" ) ){
+        gArg.getString( "input_def", &param.defFile );
+        cout << "  input_def    : " << param.defFile << endl;
+    }else { cerr << "[ERROR] Missing input_def ..." << endl; isFilesNameCorrect = false; }
 
-    if( gArg.checkExist( "pl_con" ) ){
-        gArg.getString( "pl_con", &param.plConstranitFile );
+    if( gArg.checkExist( "placement_constraints" ) ){
+        gArg.getString( "placement_constraints", &param.plConstranitFile );
         cout << "  util constraint  : " << param.plConstranitFile << endl;
     }else { cerr << "[ERROR] Missing placement_constraints ..." << endl; isFilesNameCorrect = false; }
 
-    if( gArg.checkExist( "out" ) ){
-        gArg.getString( "out", &param.outDefFile );
+    if( gArg.checkExist( "output_def" ) ){
+        gArg.getString( "output_def", &param.outDefFile );
         cout << "  output_def       : " << param.outDefFile << endl;
     }
     //else { cerr << "[ERROR] Missing output ..." << endl; isFilesNameCorrect = false; }
 
-    // black man ???
+    // black man ?? -> just to cater to the required command line input
     if( gArg.checkExist( "cpu" ) ){
         gArg.getInt( "cpu", &param.numCPUs );
         cout << "  max_num_cpu      : " << param.numCPUs << endl; }
 
-    if( !isFilesNameCorrect ) exit(0);
+    if( !isFilesNameCorrect ) { return false; }
     cout << "---------------------------------------------------------------------" << endl;
 
     // parse tech_lef & cell_lef
@@ -98,6 +103,7 @@ void Parser::parseICCAD17()
 
     // parse placement constraints
     readPlacementCts( param.plConstranitFile );
+    return true;
 }
 
 bool Parser::parseDefault()

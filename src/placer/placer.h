@@ -133,7 +133,8 @@ public:
     //change return type and input variables if neccessary
     void AddCell(Cluster* &_clus, Module* _cell, int _rowNum, int maxX);
     Cluster* AddCluster(Module* _prevCell, Module* _cell, bool _clus2prevClus = false);
-    Cluster* Decluster(Cluster* _clus, const vector<int>& _ori_delta_x);
+    void Decluster(Cluster* _clus);
+    bool Decluster_Cell(Cluster* _clus, int index, double xPos);
 
     bool reduce_DeadSpace(Module* _cell, int _rowNum);
 

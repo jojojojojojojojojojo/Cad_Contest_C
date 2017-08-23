@@ -245,6 +245,7 @@ void GnuplotPlotter::outputPlotFileFence(string filePathName)
             file << format("set object rect from %f,%f to %f,%f fs solid noborder fc rgb \"%s\"", rectangle.left(), rectangle.bottom(), rectangle.right(), rectangle.top(), _colorStrs[k].c_str()) << endl;
         }
     }
+    addArrowInPlot(file);
     file << "plot '-' with lines linetype 3" << endl;
     for (unsigned i = 0; i < _rectNRegions.size(); i++) {
         if(_rectNRegions[i].second != -1) { continue; }
@@ -270,12 +271,19 @@ void GnuplotPlotter::outputPlotFileFence(string filePathName)
         }
         file << "EOF" << endl;
     }
-
-    
-
-
     // wait
     file << "pause -1 'Press any key'" << endl;
+}
+
+void GnuplotPlotter::addArrowInPlot(ofstream& of)
+{
+    //set arrow from 1000,1000 rto 2000,1000 ls 2
+    for(unsigned i = 0 ; i < _arrows.size() ; i++)
+    {
+        double rtoX = _arrows[i].second.first-_arrows[i].first.first;
+        double rtoY = _arrows[i].second.second-_arrows[i].first.second;
+        of<<"set arrow from "<<_arrows[i].first.first<<","<<_arrows[i].first.second<<" rto "<<rtoX<<","<<rtoY<<"ls 2\n";
+    }
 }
 
 //set style arrow 1 head nofilled size screen 0.03,15 ls 2 lc rgb "purple"

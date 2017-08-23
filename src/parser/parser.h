@@ -19,7 +19,7 @@ class Parser
     //void readOPS( const string &fileName ); // to-do
 
   private:
-    void parseICCAD17();
+    bool parseICCAD17();
     bool parseDefault();
 
     void readLEF(const vector<string> &fileNames );

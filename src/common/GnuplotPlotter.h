@@ -36,6 +36,8 @@ public:
 
     void outputPlotFileFence(string filePathName);
 
+    void addArrowInPlot(ofstream& of);
+
     /////////////////////////////////////////////
     // add/clear objects
     /////////////////////////////////////////////
@@ -45,6 +47,11 @@ public:
     void addRectangleRegion(const Rect &rectangle, const int &regionIndex); 
     void addRectangleFill(const Rect &rectangle, const int &regionIndex);
     void addRectangle(const Rect &rectangle);
+    void addArrows(const double& from_x, const double& from_y, const double& to_x, const double& to_y)
+    {
+        _arrows.push_back(make_pair(make_pair(from_x,from_y), make_pair(to_x,to_y)));
+    }
+
     void clearObjects();
 
 private:
@@ -54,6 +61,9 @@ private:
     vector<pair<Rect,int> > _rectNRegions;
     vector<pair<Rect,int> > _filled_rects;
     unsigned numOfFence;
+
+    // arrows
+    vector<pair<pair<double,double>, pair<double,double> > > _arrows;
 
     vector<string> _colorStrs;      //newly add for fence region color
 

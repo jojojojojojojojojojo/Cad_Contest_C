@@ -406,7 +406,7 @@ void Circuit::outputGnuplotFigure(string filePathName)
     plotter.outputPlotFile(filePathName);
 }
 
-void Circuit::outputGnuplotFigureFence(string filePathName, bool all, int fence_id, bool fill)
+void Circuit::outputGnuplotFigureFence(string filePathName, bool all, int fence_id, bool fill, bool arrow)
 {
     GnuplotPlotter plotter;
     plotter.setNumOfFence(numFregions());
@@ -452,6 +452,17 @@ void Circuit::outputGnuplotFigureFence(string filePathName, bool all, int fence_
             }
         }
     }
+
+    //add arrows
+    if(arrow)
+    {
+        for (unsigned i = 0; i < _modules.size(); i++)
+        {
+            Module &module = _modules[i];
+            plotter.addArrows(module.gp_x(), module.gp_y(), module.x(), module.y());
+        }
+    }
+    
     
     plotter.outputPlotFileFence(filePathName);
 }

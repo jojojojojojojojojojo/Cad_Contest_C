@@ -60,8 +60,9 @@ int main( int argc, char ** argv )
     
 
     cout<<"Writing plot file\n";
-    //circuit.outputGnuplotFigure("orig.plt");
-    circuit.outputGnuplotFigureFence("orig_fence.plt");
+    circuit.outputGnuplotFigure("orig.plt");
+    circuit.outputGnuplotFigureFence("orig_fence.plt",true,1,false);
+    //circuit.outputGnuplotFigureFence("orig_fence.plt");
     
 
     //circuit.print_modRegions();
@@ -111,7 +112,7 @@ int main( int argc, char ** argv )
     double raw_score = placer.raw_score(gp_hpwl);
     cout<<"Raw Score Range = ("<<raw_score<<", "<<raw_score*1.2<<")"<<endl;
     
-    circuit.showInfo();
+    //circuit.showInfo();
 
     cout<<"Writing plot file\n";
     //circuit.outputGnuplotFigure("result.plt");
