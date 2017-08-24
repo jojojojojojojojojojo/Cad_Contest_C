@@ -23,6 +23,7 @@ SOURCES += \ # start from the .pro file
     src/placer/placer_2.cpp \
     src/placer/placer_insure.cpp \
     src/placer/node.cpp \
+    src/placer/placerrow.cpp \
     src/main.cpp
 
 HEADERS += \
@@ -40,4 +41,5 @@ HEADERS += \
     src/parser/parser.h \
     src/placer/placer.h \
     src/placer/node.h \
+    src/placer/placerrow.h \
 

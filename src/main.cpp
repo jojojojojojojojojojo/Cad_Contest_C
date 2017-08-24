@@ -46,8 +46,8 @@ int main( int argc, char ** argv )
     //circuit.print_masters();
     //circuit.print_fregions();
     //cin.get();
-    /*
-    for(unsigned i = 0 ; i < circuit.numRows() ; i++)
+    
+    /*for(unsigned i = 0 ; i < circuit.numRows() ; i++)
     {
     	cout<<"Row "<<i<<"'s bottom is "<<(circuit.isRowBottomVss(i)?"Vss":"Vdd");
     	cout<<"; Orientation = "<< orientStr(circuit.row(i).orient())<<endl;
@@ -85,6 +85,8 @@ int main( int argc, char ** argv )
     //placer.print_cell_order();
     placer.legalize_all();
     //placer.try_area2();
+    //circuit.print_modules();
+    placer.check_all_overlap();
 
     /*
     if(circuit.check_all_std_cells_on_row_site())
@@ -116,8 +118,8 @@ int main( int argc, char ** argv )
 
     cout<<"Writing plot file\n";
     //circuit.outputGnuplotFigure("result.plt");
-    circuit.outputGnuplotFigureFence("result_fence.plt",true,1,false);
-    circuit.outputGnuplotFigureFence("result_fence_full.plt",true,1,true);
+    circuit.outputGnuplotFigureFence("result_fence.plt",true,1,false,false);
+    circuit.outputGnuplotFigureFence("result_fence_full.plt",true,1,true,false);
     //circuit.outputGnuplotFigureFence("result_fence.plt");
 
     if(param.outDefFile != param.UNKNOWN) { parser.writeDEF( param.defFile , param.outDefFile); }

@@ -250,7 +250,7 @@ bool Placer::AddCell_trial(Cluster* _clus,Module* _cell, int _rowNum, int maxX, 
     {
         assert(_clus->_modules.size() != 0);
         assert(_cell->isStdCell()); //assert is standard cell (module includes preplaced blocks, I/O pins)
-        
+
         _todelete = _newNode;
         //_newNode->set_x_pos(_modPLPos[0][_cell->dbId()].x());
         if(_newNode->_x_pos == DBL_MAX) { return false; }
@@ -848,7 +848,7 @@ double Placer::get_valid_pos(Module* _cell, int _rowId)
         for(int j = (int)_inter.size()-1 ; j >= 0  ; j--)
         {
             if(left_cand >= _inter[j].first && left_cand+_cell->width() <= _inter[j].second) { break; }
-            if(left_cand+_cell->width() > _inter[j].second)
+            if(left_cand+_cell->width() > _inter[j].second && (_inter[j].second-_inter[j].first) >= _cell->width())
             {
                 left_cand = _inter[j].second-_cell->width();
                 break;
@@ -862,7 +862,7 @@ double Placer::get_valid_pos(Module* _cell, int _rowId)
         for(unsigned j = 0 ; j < _inter.size() ; j++)
         {
             if(right_cand >= _inter[j].first && right_cand+_cell->width() <= _inter[j].second) { break; }
-            if(right_cand < _inter[j].first)
+            if(right_cand < _inter[j].first && (_inter[j].second-_inter[j].first) >= _cell->width())
             {
                 right_cand = _inter[j].first;
                 break;
@@ -1159,10 +1159,10 @@ double Placer::reduce_DeadSpace_Multi_trial(Module* _cell, int _rowNum, int _deg
         {
             double _toPlace = _placeables[i].second-_cell->width();
             _toPlace = _cir->g_x_on_site(_toPlace, 0, Circuit::ALIGN_LEFT);
-            for(int j = 0 ; j < _degree ; j++)
+            /*for(int j = 0 ; j < _degree ; j++)
             {
                 assert(!Is_Interval_Block_Overlap(make_pair(_toPlace,_toPlace+_cell->width()),_rowNum+j));
-            }
+            }*/
             cost = abs(_modPLPos[0][_cell->dbId()].y()-_cir->row_id_2_y(_rowNum))+abs(_modPLPos[0][_cell->dbId()].x()-_toPlace);
             cost -= _alpha * (_cell->width()*_cell->height());
             //cost *= (0.25*_cir->numOfCells(0)/_cir->numOfCells(_degree));

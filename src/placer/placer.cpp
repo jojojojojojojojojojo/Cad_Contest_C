@@ -1,4 +1,5 @@
 #include "placer.h"
+#include "placerrow.h"
 #include <cfloat>
 #include <climits>
 #include <algorithm>
@@ -48,6 +49,20 @@ void Placer::place()
 //    t.solve();
 }
 */
+void Placer::check_all_overlap()
+{
+    rowpl::RowPlacer rp( _cir );
+    if( rp.initRowStructures( false ) ){
+        cout << "==================================================" << endl;
+        cout << "[Congratulation!!] All modules are non-overlapped!" << endl;
+        cout << "==================================================" << endl;
+    }else{
+        cout << "==================================================" << endl;
+        cout << "[Legalization Fail] Some modules overlap!!" << endl;
+        cout << "==================================================" << endl;
+        getchar();
+    }
+}
 
 //used in sorting cells
 bool pair_compare(pair<int,double>& _p1, pair<int,double>& _p2)
@@ -92,11 +107,15 @@ double Placer::compute_displacement(const Placer::PL_TYPE &pt)
 double Placer::max_displacement(const Placer::PL_TYPE &pt)
 {
     double maxDisp = 0;
+    int max_index = 0;
     for( size_t i=0; i<_cir->numComponents(); ++i ){
         Module &mod = _cir->module(i);
         double disp = Point::dist( mod.pos(), mod_2_pos(mod, pt) );
-        if(maxDisp < disp) { maxDisp = disp; }
+        if(maxDisp < disp) { maxDisp = disp; max_index = i;}
     }
+    cout<<"MAX Displacement cell = "<<_cir->module(max_index).name()<<endl;
+    cout<<"Global position = ("<<_cir->module(max_index).gp_x()<<", "<<_cir->module(max_index).gp_y()<<")"<<endl;
+    cout<<"Legalized position = ("<<_cir->module(max_index).x()<<", "<<_cir->module(max_index).y()<<")"<<endl;
     return maxDisp;
 }
 
@@ -168,8 +187,8 @@ bool Placer::move_module_2_pos(Module &mod, const Point &pos, MOVE_TYPE mt)
         {   mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() ); }
         else
         {
-            assert(mod.orient() == OR_N || mod.orient() == OR_S);
-            Orient _orient = ((mod.orient()==OR_N)?OR_S:OR_N);
+            assert(mod.orient() == OR_N || mod.orient() == OR_FS);
+            Orient _orient = ((mod.orient()==OR_N)?OR_FS:OR_N);
             mod.setPosition( targetPos.x(), targetPos.y(), _cir->chipRect() , _orient);
         }
         mod.setIsBottomVss();
@@ -304,7 +323,7 @@ void Placer::place_valid_site(Module &mod)
         if(rowId < 0){ rowId = 0; }
         if(_cir->isRowBottomVss(rowId) != mod.isBottomVss())
         { 
-            orient = ((mod.orient()==OR_N)?OR_S:OR_N); 
+            orient = ((mod.orient()==OR_N)?OR_FS:OR_N); 
             change = true;
         }
     }
@@ -371,7 +390,7 @@ void Placer::print_fanins_fanouts(Cluster* _clus) const
 bool Placer::check_all(int to_index) const
 {
     cout<<"Checking...\n";
-    bool noBlockOverlap = true, allOnSite = true;
+    bool noBlockOverlap = true;
     int numOfOverlap = 0;
     int numOfOutOfBound = 0;
     vector< vector< pair<int,double> > > temp_nodes;
@@ -392,6 +411,7 @@ bool Placer::check_all(int to_index) const
         assert(inclusIndex != -1 && (int)_clus->_modules.size() > inclusIndex && _clus->_modules[inclusIndex]->_module->dbId() ==_cir->module(index).dbId());
         for(int j = 0 ; j < _clus->_modules[inclusIndex]->_degree ; j++)
         {
+            assert(_clus->_modules[inclusIndex]->_rowId+j >= 0 && _clus->_modules[inclusIndex]->_rowId+j < (int)_cir->numRows());
             temp_nodes[_clus->_modules[inclusIndex]->_rowId+j].push_back(make_pair(index,_clus->_x_ref+_clus->_delta_x[inclusIndex]));
         }
         /*
@@ -462,23 +482,16 @@ bool Placer::check_all(int to_index) const
         bool temp = Is_Cluster_Block_Overlap(iter->second,true);
         noBlockOverlap = (noBlockOverlap)?!temp:noBlockOverlap;
     }    
-    if(_cir->check_all_std_cells_on_row_site())
-    {
-        cout<<"*******************All Cells On Site*******************\n";
-    }
-    else
-    {
-        cout<<"****************Not All Cell on Site*******************\n";
-        allOnSite = false;
-    }
+    
     cout<<"*************CHECK REPORT****************"<<endl;
     cout<<"number of overlaps = "<<numOfOverlap<<endl;
     cout<<"number of row out of boundary = "<<numOfOutOfBound<<endl;
-    return (numOfOverlap ==0 && numOfOutOfBound == 0 && noBlockOverlap && allOnSite);   //return true if there is overlap
+    return (numOfOverlap ==0 && numOfOutOfBound == 0 && noBlockOverlap);   //return true if there is overlap
 }
 
 bool Placer::check_PG() const
 {
+    bool allOnSite = true;
     int numOfWrongPG = 0;
     for(unsigned i = 0 ; i < _cir->numModules() ; i++)
     {
@@ -486,7 +499,7 @@ bool Placer::check_PG() const
 
         Module* _cell = &_cir->module(i);
         string orig_Vss = (_cell->isBottomVss())?"Vss":"Vdd";
-        _cell->setIsBottomVss();
+        //_cell->setIsBottomVss();
         int rowNum = _cir->y_2_row_id(_cell->y());
         if(_cell->isBottomVss() != _cir->isRowBottomVss(rowNum))
         {
@@ -504,7 +517,17 @@ bool Placer::check_PG() const
 
     cout<<"*************CHECK PG REPORT****************"<<endl;
     cout<<"number of wrong PG alignment = "<<numOfWrongPG<<endl;
-    return  ( numOfWrongPG == 0 );
+
+    if(_cir->check_all_std_cells_on_row_site())
+    {
+        cout<<"*******************All Cells On Site*******************\n";
+    }
+    else
+    {
+        cout<<"****************Not All Cell on Site*******************\n";
+        allOnSite = false;
+    }
+    return  ( numOfWrongPG == 0 && allOnSite);
 }
 
 void Placer::print_delta_x(Cluster* _clus) const

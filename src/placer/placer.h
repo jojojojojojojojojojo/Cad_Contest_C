@@ -74,6 +74,7 @@ public:
     }
 
     //void place();
+    void check_all_overlap();
     /////////////////////////////////////////////
     // Clear and Initialize (in placer 2)
     /////////////////////////////////////////////

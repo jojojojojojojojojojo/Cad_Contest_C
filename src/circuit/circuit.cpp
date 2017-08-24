@@ -157,7 +157,7 @@ void Circuit::addPins4EachModule()
         Module &mod = _modules[i];
         mod.creatPinNameMap();
         mod.setPosition( mod.x(), mod.y() );
-        mod.setIsBottomVss();
+        if(mod.isStdCell()) mod.setIsBottomVss();
     }
 }
 

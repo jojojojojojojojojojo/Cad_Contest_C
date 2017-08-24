@@ -192,8 +192,11 @@ public:
         string pinName = _name + ":vss";
         // either find or not a core (-> a preplaced block)
         assert(_pinsNameMap.find(pinName) != _pinsNameMap.end() || _classType != "CORE");
-        Pin* _vssPin = _pPins[_pinsNameMap.find(pinName)->second];
+        assert(!_isFixed);
+        //Pin* _vssPin = _pPins[_pinsNameMap.find(pinName)->second];
+        Pin* _vssPin = _pPins[find_pin_id_by_name(pinName)];
         double yPos = _vssPin->yOffset()+0.5*_height+0.5*(_vssPin->port().top()-_vssPin->port().bottom());
+        //cout<<"yPos = "<<yPos<<endl;
         _isBottomVss = ((int)(yPos/Row::site.height())%2 == 0)?true:false;
     }
 
@@ -207,11 +210,13 @@ public:
         cout << " (x,y)                : " << _x  << ", " << _y << endl;
         cout << " (width,height)       : " << _width << ", " << _height << endl;
         cout << " isFixed              : " << ((_isFixed)?"true":"false") << endl;
-        cout << " orient               : " << orientStr(_orient) << endl;
         cout << " numPins              : " << _pPins.size() << endl;
         cout << " IsBottomVss          : " << ((_isBottomVss)?"true":"false") << endl;
         cout << " classType            : " << _classType << endl;
         cout << " (leftEdge,rightEdge) : " << _edgeTypeLeft << ", " << _edgeTypeRight << endl;
+        cout << " masterId             : " << _masterId<<endl;
+        cout << " RECTS Printing       : "<<endl;
+        showRect();
         cout << endl;
         cout.unsetf(ios::fixed);
     }
@@ -221,6 +226,11 @@ public:
     void showPins()
     {
         for (unsigned i = 0; i < _pPins.size(); i++) { _pPins[i]->showInfo();  }
+    }
+
+    void showRect()
+    {
+        for (unsigned i = 0 ; i < _rects.size() ; i++) { cout<<rect(i)<<endl; }
     }
 
   private:

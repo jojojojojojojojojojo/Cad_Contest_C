@@ -218,10 +218,18 @@ void Circuit::print_fregions()
 void Circuit::print_modules()
 {
     cout<<"Print Modules...\n";
+    map<int,bool> masterIds;
     for(unsigned i = 0 ; i < _modules.size() ; i++)
     {
-         _modules[i].showInfo();
-         //_modules[i].showPins();
+        if(!_modules[i].isStdCell()) continue;
+        /*if(masterIds.find(_modules[i].masterId()) != masterIds.end()) 
+        {
+            assert( masterIds.find(_modules[i].masterId())->second == _modules[i].isBottomVss());
+            continue;
+        }
+        masterIds[_modules[i].masterId()] = _modules[i].isBottomVss();*/
+         _modules[i].showInfo();cin.get();
+         //_modules[i].showPins();//cin.get();
         //cout<<"Names = "<<_modules[i].name()<<endl;
     }
 }
@@ -260,6 +268,7 @@ void Circuit::print_masters()
     {
         _masters[i].showInfo(); 
         _masters[i].showPins();
+        //cin.get();
     }
 }
 
