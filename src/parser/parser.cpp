@@ -285,7 +285,7 @@ void Parser::writeDEF( string &oldFileName, string &newFileName )
     if( newFileName == param.UNKNOWN )
         newFileName = param.prefix + ".def";
 
-    cout << " write .def file : " << newFileName << endl;
+    cout << "Writing .def file : " << newFileName << endl;
 
     ifstream in( oldFileName );
     ofstream out( newFileName );
@@ -362,7 +362,7 @@ void Parser::writeComponents(ostream &outfile)
 
         outfile << endl<<preFixedModules[i];
         if( !curmod.isFixed() ){
-            outfile << "( " << curmod.x() << " " << curmod.y() << " ) ";
+            outfile << "( " << (int)curmod.x() << " " << (int)curmod.y() << " ) ";
             outfile << orientStr( curmod.orient() );
         }
 

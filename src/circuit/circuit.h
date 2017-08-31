@@ -222,14 +222,14 @@ void Circuit::print_modules()
     for(unsigned i = 0 ; i < _modules.size() ; i++)
     {
         if(!_modules[i].isStdCell()) continue;
-        /*if(masterIds.find(_modules[i].masterId()) != masterIds.end()) 
+        if(masterIds.find(_modules[i].masterId()) != masterIds.end()) 
         {
             assert( masterIds.find(_modules[i].masterId())->second == _modules[i].isBottomVss());
             continue;
         }
-        masterIds[_modules[i].masterId()] = _modules[i].isBottomVss();*/
-         _modules[i].showInfo();cin.get();
-         //_modules[i].showPins();//cin.get();
+        masterIds[_modules[i].masterId()] = _modules[i].isBottomVss();
+         _modules[i].showInfo();//cin.get();
+         _modules[i].showPins();cin.get();
         //cout<<"Names = "<<_modules[i].name()<<endl;
     }
 }

@@ -59,16 +59,16 @@ int main( int argc, char ** argv )
     //Row::site.showInfo();
     
 
-    cout<<"Writing plot file\n";
-    circuit.outputGnuplotFigure("orig.plt");
-    circuit.outputGnuplotFigureFence("orig_fence.plt",true,1,false);
+    //cout<<"Writing plot file\n";
+    //circuit.outputGnuplotFigure("orig.plt");
+    //circuit.outputGnuplotFigureFence("orig_fence.plt",true,1,false);
     //circuit.outputGnuplotFigureFence("orig_fence.plt");
     
 
     //circuit.print_modRegions();
     //cin.get();
 
-    double gp_hpwl = placer.compute_hpwl();
+    //double gp_hpwl = placer.compute_hpwl();
     //double utilize = placer.find_utilization();
     //circuit.print_rows();
     //cin.get();
@@ -80,13 +80,13 @@ int main( int argc, char ** argv )
 
     placer.place_all_mods_to_site();
     placer.sort_cells();
-    double lower_disp_bound = placer.compute_displacement(Placer::PL_INIT);
+    //double lower_disp_bound = placer.compute_displacement(Placer::PL_INIT);
 
     //placer.print_cell_order();
     placer.legalize_all();
     //placer.try_area2();
     //circuit.print_modules();
-    placer.check_all_overlap();
+    //placer.check_all_overlap();
 
     /*
     if(circuit.check_all_std_cells_on_row_site())
@@ -100,7 +100,7 @@ int main( int argc, char ** argv )
     finish = clock();
     cout<<"# of Components = "<<circuit.numComponents()<<endl;
     cout<<"Total Time in Legalization (second) = "<<(double)(finish-start)/CLOCKS_PER_SEC<<endl;
-
+/*
     double displacement = placer.compute_displacement(Placer::PL_INIT);
     double lg_hpwl = placer.compute_hpwl();
     //cout<<"Utilization = "<<utilize<<endl;
@@ -121,7 +121,7 @@ int main( int argc, char ** argv )
     circuit.outputGnuplotFigureFence("result_fence.plt",true,1,false,false);
     circuit.outputGnuplotFigureFence("result_fence_full.plt",true,1,true,false);
     //circuit.outputGnuplotFigureFence("result_fence.plt");
-
+*/
     if(param.outDefFile != param.UNKNOWN) { parser.writeDEF( param.defFile , param.outDefFile); }
 	return 0;
 }

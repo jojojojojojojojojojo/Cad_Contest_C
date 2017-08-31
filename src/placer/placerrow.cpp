@@ -375,7 +375,7 @@ bool RowPlacer::initRowStructures(bool isOnlyConsiderFixedMacros)
     size_t numTotalRects = 0;
     for( size_t i=0; i<_cir->numModules(); ++i ){
         Module &mod = _cir->module(i);
-        if( mod.isIOPin() && !mod.pin(0).isMetal1() ){
+        if( mod.isIOPin() ){
             continue;
         }
 
@@ -398,7 +398,7 @@ bool RowPlacer::initRowStructures(bool isOnlyConsiderFixedMacros)
     {
         Module &mod = _cir->module(i);
 
-        if( mod.isIOPin() && !mod.pin(0).isMetal1() ) continue;
+        if( mod.isIOPin() ) continue;
 
         for( size_t j=0; j<mod.numRects(); ++j )
         {
